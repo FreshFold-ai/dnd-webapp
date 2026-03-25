@@ -1,0 +1,22 @@
+# render.yaml — Render Infrastructure as Code blueprint.
+#
+# Defines the web service configuration so Render can auto-detect
+# build/start commands and environment settings from this repo.
+#
+# Usage:
+#   1. Push this file to GitHub.
+#   2. On Render dashboard → New → Blueprint → select this repo.
+#   3. Render reads this file and provisions the service automatically.
+#
+# Docs: https://docs.render.com/infrastructure-as-code
+
+services:
+  - type: web
+    name: term-project-team-invincible
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
