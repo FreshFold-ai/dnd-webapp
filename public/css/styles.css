@@ -1,0 +1,42 @@
+/* ── Base reset ────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f6f7fb;
+  color: #1f2937;
+}
+
+/* ── Layout ────────────────────────────────────────────────── */
+main {
+  max-width: 720px;
+  margin: 3rem auto;
+  padding: 1rem;
+}
+
+/* ── Form controls ─────────────────────────────────────────── */
+input, button {
+  padding: 0.6rem 0.8rem;
+  margin-right: 0.5rem;
+}
+
+/* ── Message feed ──────────────────────────────────────────── */
+#messages {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  min-height: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d1d5db;
+}
+
+/* ── Live member counter ──────────────────────────────────── */
+#member-count {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  background: #fff;
+  border: 1px solid #d1d5db;
+}
