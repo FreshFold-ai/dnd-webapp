@@ -48,3 +48,16 @@ registerSocketHandlers(io);
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// HANDLE CRASHES
+/**
+ * Global handlers for uncaught exceptions and unhandled promise rejections.
+ * Logs the error to the console
+ */
+process.on("uncaughtException", (err) => {
+  console.error("[UNCAUGHT EXCEPTION]", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("[UNHANDLED REJECTION]", err);
+});
