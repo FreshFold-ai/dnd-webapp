@@ -1,106 +1,146 @@
-const { getRoomSize, emitRoomCount } = require('../helpers/room');
- 
+/**
+ * @file src/server/socketHandlers.js
+ * @description Registers all Socket.IO event listeners for room-based
+ *              real-time interactions.
+ */
+
+const { getRoomSize, emitRoomCount } = require("../helpers/room");
+
+// In memory storage
+const roomMessages = {}; // { roomId: [messages] }
+const userLastMessageTime = {}; // rate limiting
+
 function registerSocketHandlers(io) {
-  io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}`);
- 
-    // ─── Room Events ────────────────────────────────────────────────────────
- 
-    socket.on('room:join', ({ roomId, username }) => {
+  io.on("connection", (socket) => {
+    console.log(`[CONNECT] ${socket.id}`);
+
+    socket.on("room:join", ({ roomId, username }) => {
+      if (!roomId || !username) return;
+
       socket.data.roomId = roomId;
       socket.data.username = username;
- 
+
       socket.join(roomId);
- 
-      // Tell the joining user they're in
-      socket.emit('room:joined', { roomId, socketId: socket.id });
- 
-      // Tell everyone else in the room a new user arrived
-      socket.to(roomId).emit('user:joined', {
+      console.log(`[JOIN] ${username} joined ${roomId}`);
+
+      if (!roomMessages[roomId]) {
+        roomMessages[roomId] = [];
+      }
+
+      socket.to(roomId).emit("user:joined", {
         socketId: socket.id,
         username,
       });
- 
+
       emitRoomCount(io, roomId);
     });
- 
-    socket.on('room:message', ({ text }) => {
-      const { roomId, username } = socket.data;
-      if (!roomId) return;
- 
-      io.to(roomId).emit('room:message', {
+
+    socket.on("room:message", ({ text }) => {
+      const { roomId, username } = socket.data || {};
+
+      if (!roomId || !username || !text) return;
+
+      if (typeof text !== "string" || !text.trim()) {
+        socket.emit("error", "Message cannot be empty");
+        return;
+      }
+
+      if (text.length > 300) {
+        socket.emit("error", "Message too long (max 300 chars)");
+        return;
+      }
+
+      const now = Date.now();
+      const lastTime = userLastMessageTime[socket.id] || 0;
+
+      if (now - lastTime < 1000) {
+        socket.emit("error", "You're sending messages too fast");
+        return;
+      }
+
+      userLastMessageTime[socket.id] = now;
+
+      io.to(roomId).emit("room:message", {
         from: username,
         text,
         at: new Date().toISOString(),
       });
+
+      if (!roomMessages[roomId]) {
+        roomMessages[roomId] = [];
+      }
+
+      roomMessages[roomId].push({
+        from: username,
+        text: text.trim(),
+        at: new Date().toISOString()
+      });
+
+      if (roomMessages[roomId].length > 100) {
+        roomMessages[roomId].shift();
+      }
     });
- 
-    // ─── DnD Game Events ────────────────────────────────────────────────────
- 
-    // Broadcast a dice roll result to the whole room
+
+    // ─── DnD Game Events ──────────────────────────────────────────────────
+
     socket.on('game:roll', ({ result, die }) => {
       const { roomId, username } = socket.data;
       if (!roomId) return;
- 
+
       io.to(roomId).emit('game:roll', {
         from: username,
         result,
-        die,         // e.g. 20 for a d20
+        die,
         at: new Date().toISOString(),
       });
     });
- 
-    // DM-only: push a new narration line to the room
+
     socket.on('game:narrate', ({ text }) => {
       const { roomId, username } = socket.data;
       if (!roomId) return;
- 
+
       io.to(roomId).emit('game:narrate', {
         from: username,
         text,
         at: new Date().toISOString(),
       });
     });
- 
-    // ─── WebRTC Signaling ───────────────────────────────────────────────────
-    // The server doesn't interpret any of this — it just passes messages
-    // between two specific sockets so they can negotiate a direct P2P link.
- 
-    // Offer: Player A wants to open a P2P connection to Player B
+
+    // ─── WebRTC Signaling ─────────────────────────────────────────────────
+
     socket.on('webrtc:offer', ({ targetId, offer }) => {
       io.to(targetId).emit('webrtc:offer', {
         fromId: socket.id,
         offer,
       });
     });
- 
-    // Answer: Player B accepts and sends its side of the handshake back
+
     socket.on('webrtc:answer', ({ targetId, answer }) => {
       io.to(targetId).emit('webrtc:answer', {
         fromId: socket.id,
         answer,
       });
     });
- 
-    // ICE candidate: routing info so the browsers can find each other
+
     socket.on('webrtc:ice-candidate', ({ targetId, candidate }) => {
       io.to(targetId).emit('webrtc:ice-candidate', {
         fromId: socket.id,
         candidate,
       });
     });
- 
-    // ─── Disconnect ─────────────────────────────────────────────────────────
- 
-    socket.on('disconnect', () => {
-      const { roomId, username } = socket.data;
-      if (roomId) {
-        socket.to(roomId).emit('user:left', { username });
-        emitRoomCount(io, roomId);
-      }
-      console.log(`Socket disconnected: ${socket.id}`);
+
+    // ─── Disconnect ───────────────────────────────────────────────────────
+
+    socket.on("disconnect", () => {
+      const { roomId, username } = socket.data || {};
+      if (!roomId || !username) return;
+
+      console.log(`[DISCONNECT] ${username} left ${roomId}`);
+
+      socket.to(roomId).emit("user:left", { username });
+      emitRoomCount(io, roomId);
     });
   });
 }
- 
+
 module.exports = { registerSocketHandlers };
