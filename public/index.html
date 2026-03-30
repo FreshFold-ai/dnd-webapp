@@ -1,38 +1,110 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Room App Starter</title>
-    <link rel="stylesheet" href="/css/styles.css" />
-  </head>
-  <body>
-    <main>
-      <h1>Room App Starter</h1>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Tavern — DnD Room</title>
+  <link rel="stylesheet" href="/css/styles.css"/>
+</head>
+<body>
 
-      <!-- Join form: visible before the user enters a room -->
-      <section id="join-section">
-        <input id="username" placeholder="Username" />
-        <input id="roomId" placeholder="Room ID (e.g. csci-101)" />
-        <button id="joinBtn">Join Room</button>
-      </section>
+  <!-- ── Join Screen ───────────────────────────────────────── -->
+  <div id="join-section">
+    <div class="join-card">
+      <h1 class="join-title">⚔️ Enter the Tavern</h1>
+      <p class="join-sub">Type <strong>DM</strong> as your name to become the Dungeon Master.</p>
+      <input id="room-id"   type="text" placeholder="Room name (e.g. dungeon-1)" />
+      <input id="username"  type="text" placeholder="Your adventurer name" />
+      <button onclick="joinRoomFromInputs()">Join Quest</button>
+    </div>
+  </div>
 
-      <!-- Chat area: shown after successfully joining a room -->
-      <section id="chat-section" hidden>
-        <p id="status"></p>
-        <div id="messages"></div>
-        <form id="messageForm">
-          <input id="messageInput" placeholder="Type a message..." />
-          <button type="submit">Send</button>
-        </form>
-        <!-- Live counter: updates on every join/leave via room:count event -->
-        <p id="member-count">Members: 0</p>
-      </section>
+  <!-- ── Chat / Game Screen ────────────────────────────────── -->
+  <div id="chat-section" class="hidden">
+
+    <aside class="sidebar">
+      <div class="room-info">
+        <span class="room-label">Room</span>
+        <span id="room-display"></span>
+      </div>
+      <div class="member-box">
+        <span class="member-label">Adventurers</span>
+        <span id="member-count" class="member-count">0</span>
+      </div>
+      <div class="avatar-box">
+        <span class="member-label">Your avatar</span>
+        <select id="avatar-select">
+          <option value="🧙">🧙 Wizard</option>
+          <option value="⚔️">⚔️ Warrior</option>
+          <option value="🏹">🏹 Ranger</option>
+          <option value="🗡️">🗡️ Rogue</option>
+          <option value="🛡️">🛡️ Paladin</option>
+          <option value="🌿">🌿 Druid</option>
+        </select>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <!-- Message feed -->
+      <div id="message-feed" class="message-feed"></div>
+
+      <!-- Chat input -->
+      <div class="input-row">
+        <input id="message-input" type="text" placeholder="Say something to the party…"/>
+        <button onclick="sendMessageFromInput()">Send</button>
+      </div>
+
+      <!-- Dice section -->
+      <div id="dice-section" class="panel hidden">
+        <span class="panel-label">Roll dice</span>
+        <button class="dice-btn" onclick="rollDice(4)">d4</button>
+        <button class="dice-btn" onclick="rollDice(6)">d6</button>
+        <button class="dice-btn" onclick="rollDice(8)">d8</button>
+        <button class="dice-btn" onclick="rollDice(10)">d10</button>
+        <button class="dice-btn" onclick="rollDice(12)">d12</button>
+        <button class="dice-btn" onclick="rollDice(20)">d20</button>
+      </div>
+
+      <!-- DM-only narration (hidden for regular players) -->
+      <div id="dm-section" class="panel hidden">
+        <span class="panel-label">DM Narration</span>
+        <input id="narrate-input" type="text" placeholder="Describe what happens next…"/>
+        <button onclick="sendNarration()">Narrate</button>
+      </div>
+
+      <!-- P2P file trade -->
+      <div id="trade-section" class="panel hidden">
+        <span class="panel-label">Trade item (P2P)</span>
+        <input id="trade-target" type="text" placeholder="Target socket ID (first 6 chars)"/>
+        <input id="trade-file"   type="file"/>
+        <button onclick="triggerTrade()">Send Item</button>
+      </div>
+
     </main>
+  </div>
 
-    <!-- Socket.IO client library served automatically by the server -->
-    <script src="/socket.io/socket.io.js"></script>
-    <!-- Application client logic -->
-    <script src="/js/app.js"></script>
-  </body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    // Show room name in sidebar after joining
+    socket.on('room:joined', ({ roomId }) => {
+      document.getElementById('room-display').textContent = roomId;
+    });
+
+    // Trade helper — matches partial socket ID the user typed
+    function triggerTrade() {
+      const partial = document.getElementById('trade-target').value.trim();
+      const file    = document.getElementById('trade-file').files[0];
+      if (!partial || !file) return;
+
+      const targetId = Object.keys(dataChannels).find(id => id.startsWith(partial));
+      if (!targetId) {
+        alert('No connected peer matching that ID. Check the system messages for their ID.');
+        return;
+      }
+      sendFileToPeer(targetId, file);
+    }
+  </script>
+</body>
 </html>
