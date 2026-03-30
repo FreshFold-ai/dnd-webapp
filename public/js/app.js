@@ -1,158 +1,245 @@
-/**
- * @file public/js/app.js
- * @description Browser-side client for joining rooms and exchanging messages
- *              via Socket.IO.
- *
- * This script connects to the Socket.IO server on the same origin,
- * manages the join form and chat UI, and relays events between the
- * server and the DOM.
- */
-
-/* ── Socket connection ─────────────────────────────────────── */
-
-/**
- * socket — the Socket.IO client instance.
- * Connects automatically to the same origin that served the page.
- */
+// ─── Socket Setup ────────────────────────────────────────────────────────────
 const socket = io();
+ 
+// ─── State ───────────────────────────────────────────────────────────────────
+let myUsername = '';
+let myRoomId = '';
+let isDM = false;
+ 
+// peerConnections: Map<socketId, RTCPeerConnection>
+const peerConnections = {};
+// dataChannels: Map<socketId, RTCDataChannel>
+const dataChannels = {};
+// pendingFiles: Map<socketId, { name, chunks, totalSize }>
+const pendingFiles = {};
+ 
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+ 
+// ─── DOM Refs ─────────────────────────────────────────────────────────────────
+let feed, memberCount, joinSection, chatSection;
+let roomIdInput, usernameInput, messageInput;
+let diceSection, dmSection, narrateInput, tradeSection;
 
-/* ── DOM references ────────────────────────────────────────── */
-
-const joinBtn       = document.getElementById("joinBtn");
-const usernameInput = document.getElementById("username");
-const roomIdInput   = document.getElementById("roomId");
-const joinSection   = document.getElementById("join-section");
-const chatSection   = document.getElementById("chat-section");
-const statusEl      = document.getElementById("status");
-const messagesEl    = document.getElementById("messages");
-const messageForm   = document.getElementById("messageForm");
-const messageInput  = document.getElementById("messageInput");
-
-/** Whether the user has successfully joined a room. */
-let joined = false;
-
-/* ── Helper functions ──────────────────────────────────────── */
-
-/**
- * addMessage — appends a text line to the chat message list.
- *
- * @param   {string} text — the line to display.
- * @returns {void}
- *
- * Side-effect: creates a <p> element inside #messages and scrolls
- *              the container to the bottom so the newest message
- *              is always visible.
- */
-function addMessage(text) {
-  const el = document.createElement("p");
-  el.textContent = text;
-  messagesEl.appendChild(el);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+document.addEventListener('DOMContentLoaded', () => {
+  feed          = document.getElementById('message-feed');
+  memberCount   = document.getElementById('member-count');
+  joinSection   = document.getElementById('join-section');
+  chatSection   = document.getElementById('chat-section');
+  roomIdInput   = document.getElementById('room-id');
+  usernameInput = document.getElementById('username');
+  messageInput  = document.getElementById('message-input');
+  diceSection   = document.getElementById('dice-section');
+  dmSection     = document.getElementById('dm-section');
+  narrateInput  = document.getElementById('narrate-input');
+  tradeSection  = document.getElementById('trade-section');
+});
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function addMessage(text, type = 'chat') {
+  const p = document.createElement('p');
+  p.className = `msg msg--${type}`;
+  p.textContent = text;
+  feed.appendChild(p);
+  feed.scrollTop = feed.scrollHeight;
 }
-
-/**
- * joinRoomFromInputs — reads the username & roomId inputs and emits
- *                      a "room:join" event to the server.
- *
- * Input:  none (reads DOM input values).
- * Output: emits "room:join" with { username, roomId } if both inputs
- *         contain non-empty trimmed strings.
- *         Does nothing if either field is blank.
- */
+ 
+// ─── Join ─────────────────────────────────────────────────────────────────────
 function joinRoomFromInputs() {
-  const username = usernameInput.value.trim();
   const roomId   = roomIdInput.value.trim();
-  if (!username || !roomId) return;
-  socket.emit("room:join", { username, roomId });
+  const username = usernameInput.value.trim();
+  if (!roomId || !username) return;
+ 
+  myRoomId   = roomId;
+  myUsername = username;
+  isDM       = username.toLowerCase() === 'dm';
+ 
+  socket.emit('room:join', { roomId, username });
 }
-
-/**
- * sendMessageFromInput — reads the message input and emits a
- *                        "room:message" event to the server.
- *
- * Input:  none (reads messageInput value).
- * Output: emits "room:message" with { text } if the user has joined
- *         and the input is non-empty.  Clears the input afterwards.
- */
+ 
+// ─── Chat ─────────────────────────────────────────────────────────────────────
 function sendMessageFromInput() {
-  if (!joined) return;
   const text = messageInput.value.trim();
   if (!text) return;
-  socket.emit("room:message", { text });
-  messageInput.value = "";
+  socket.emit('room:message', { text });
+  messageInput.value = '';
 }
-
-/* ── UI event listeners ────────────────────────────────────── */
-
-/** Click the Join button to attempt joining a room. */
-joinBtn.addEventListener("click", joinRoomFromInputs);
-
-/** Submit the message form to send a chat message. */
-messageForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  sendMessageFromInput();
+ 
+// ─── DnD: Dice Roll ───────────────────────────────────────────────────────────
+function rollDice(die = 20) {
+  const result = Math.floor(Math.random() * die) + 1;
+  socket.emit('game:roll', { result, die });
+}
+ 
+// ─── DnD: DM Narrate ──────────────────────────────────────────────────────────
+function sendNarration() {
+  const text = narrateInput.value.trim();
+  if (!text) return;
+  socket.emit('game:narrate', { text });
+  narrateInput.value = '';
+}
+ 
+// ─── WebRTC: Create a peer connection to a new player ────────────────────────
+function createPeerConnection(targetId) {
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+  peerConnections[targetId] = pc;
+ 
+  // Send ICE candidates to the other peer via the server
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate) {
+      socket.emit('webrtc:ice-candidate', { targetId, candidate });
+    }
+  };
+ 
+  // When the remote side opens a DataChannel (they initiated)
+  pc.ondatachannel = ({ channel }) => {
+    setupDataChannel(channel, targetId);
+  };
+ 
+  return pc;
+}
+ 
+// ─── WebRTC: Wire up a DataChannel for file transfers ────────────────────────
+function setupDataChannel(channel, peerId) {
+  dataChannels[peerId] = channel;
+  channel.binaryType = 'arraybuffer';
+ 
+  channel.onopen = () => {
+    addMessage(`Direct P2P link established with ${peerId.slice(0, 6)}…`, 'system');
+  };
+ 
+  channel.onmessage = ({ data }) => {
+    // Protocol: first message is JSON metadata, rest are binary chunks
+    if (typeof data === 'string') {
+      const meta = JSON.parse(data);
+      pendingFiles[peerId] = { name: meta.name, chunks: [], totalSize: meta.size };
+    } else {
+      const file = pendingFiles[peerId];
+      if (!file) return;
+      file.chunks.push(data);
+      const received = file.chunks.reduce((n, c) => n + c.byteLength, 0);
+ 
+      if (received >= file.totalSize) {
+        // Reassemble and offer as download
+        const blob = new Blob(file.chunks);
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = file.name;
+        a.textContent = `Download "${file.name}"`;
+        const p = document.createElement('p');
+        p.className = 'msg msg--trade';
+        p.appendChild(a);
+        feed.appendChild(p);
+        feed.scrollTop = feed.scrollHeight;
+        delete pendingFiles[peerId];
+      }
+    }
+  };
+}
+ 
+// ─── WebRTC: Initiate offer to a new peer ────────────────────────────────────
+async function initiateOffer(targetId) {
+  const pc      = createPeerConnection(targetId);
+  const channel = pc.createDataChannel('file-trade');
+  setupDataChannel(channel, targetId);
+ 
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('webrtc:offer', { targetId, offer });
+}
+ 
+// ─── P2P File Trade ───────────────────────────────────────────────────────────
+function sendFileToPeer(targetId, file) {
+  const channel = dataChannels[targetId];
+  if (!channel || channel.readyState !== 'open') {
+    addMessage('No open P2P channel to that player yet.', 'system');
+    return;
+  }
+ 
+  // Send metadata first, then the raw file in chunks
+  channel.send(JSON.stringify({ name: file.name, size: file.size }));
+ 
+  const CHUNK = 16 * 1024; // 16 KB chunks
+  let offset = 0;
+  const reader = new FileReader();
+ 
+  reader.onload = (e) => {
+    channel.send(e.target.result);
+    offset += e.target.result.byteLength;
+    if (offset < file.size) readSlice(offset);
+    else addMessage(`Sent "${file.name}" to ${targetId.slice(0, 6)}…`, 'system');
+  };
+ 
+  function readSlice(o) {
+    const slice = file.slice(o, o + CHUNK);
+    reader.readAsArrayBuffer(slice);
+  }
+  readSlice(0);
+}
+ 
+// ─── Socket Event Listeners ───────────────────────────────────────────────────
+ 
+socket.on('room:joined', ({ roomId, socketId }) => {
+  joinSection.classList.add('hidden');
+  chatSection.classList.remove('hidden');
+  diceSection.classList.remove('hidden');
+  tradeSection.classList.remove('hidden');
+  if (isDM) dmSection.classList.remove('hidden');
+  addMessage(`You joined room "${roomId}" as ${myUsername}.`, 'system');
 });
-
-/* ── Socket event handlers ─────────────────────────────────── */
-
-/**
- * room:joined — server confirms that this client has joined a room.
- *
- * Input payload:  { roomId: string, socketId: string }
- * Side-effects:
- *   - Sets joined = true.
- *   - Hides the join form section, shows the chat section.
- *   - Updates the status text with room name and socket ID.
- *   - Appends a "You joined" notification.
- */
-socket.on("room:joined", ({ roomId, socketId }) => {
-  joined = true;
-  joinSection.hidden = true;
-  chatSection.hidden = false;
-  statusEl.textContent = `Joined room "${roomId}" as socket ${socketId}`;
-  addMessage("You joined the room.");
+ 
+socket.on('room:count', ({ count }) => {
+  memberCount.textContent = count;
 });
-
-/**
- * room:count — server sends updated member count for the room.
- *
- * Input payload:  { roomId: string, count: number }
- * Side-effects:
- *   - Updates the #member-count element with the current count.
- *   - Also stores count in statusEl.dataset.count for programmatic access.
- */
-socket.on("room:count", ({ count }) => {
-  document.getElementById("member-count").textContent = `Members: ${count}`;
-  statusEl.dataset.count = String(count);
+ 
+socket.on('user:joined', ({ socketId, username }) => {
+  addMessage(`${username} joined the party.`, 'system');
+  // We initiate the WebRTC offer to the newcomer
+  initiateOffer(socketId);
 });
-
-/**
- * user:joined — another user joined the same room.
- *
- * Input payload:  { socketId: string, username: string }
- * Side-effect: appends a join notification to the message list.
- */
-socket.on("user:joined", ({ username }) => {
-  addMessage(`${username} joined.`);
+ 
+socket.on('user:left', ({ username }) => {
+  addMessage(`${username} left the party.`, 'system');
 });
-
-/**
- * user:left — another user disconnected from the room.
- *
- * Input payload:  { username: string }
- * Side-effect: appends a leave notification to the message list.
- */
-socket.on("user:left", ({ username }) => {
-  addMessage(`${username} left.`);
+ 
+socket.on('room:message', ({ from, text }) => {
+  addMessage(`${from}: ${text}`);
 });
-
-/**
- * room:message — a chat message was broadcast to the room.
- *
- * Input payload:  { from: string, text: string, at: string (ISO 8601) }
- * Side-effect: formats the timestamp and appends the message to the list.
- */
-socket.on("room:message", ({ from, text, at }) => {
-  const time = new Date(at).toLocaleTimeString();
-  addMessage(`[${time}] ${from}: ${text}`);
+ 
+// ─── DnD Game Events ──────────────────────────────────────────────────────────
+ 
+socket.on('game:roll', ({ from, result, die }) => {
+  addMessage(`🎲 ${from} rolled a d${die} — got ${result}!`, 'roll');
 });
+ 
+socket.on('game:narrate', ({ from, text }) => {
+  addMessage(`📜 [DM] ${text}`, 'narrate');
+});
+ 
+// ─── WebRTC Signaling ─────────────────────────────────────────────────────────
+ 
+socket.on('webrtc:offer', async ({ fromId, offer }) => {
+  const pc = createPeerConnection(fromId);
+  await pc.setRemoteDescription(offer);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit('webrtc:answer', { targetId: fromId, answer });
+});
+ 
+socket.on('webrtc:answer', async ({ fromId, answer }) => {
+  const pc = peerConnections[fromId];
+  if (pc) await pc.setRemoteDescription(answer);
+});
+ 
+socket.on('webrtc:ice-candidate', async ({ fromId, candidate }) => {
+  const pc = peerConnections[fromId];
+  if (pc) await pc.addIceCandidate(candidate);
+});
+ 
+// ─── Key bindings ─────────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    if (document.activeElement === messageInput) sendMessageFromInput();
+    if (document.activeElement === narrateInput)  sendNarration();
+  }
+});
+ 

@@ -1,40 +1,216 @@
-/* ── Base reset ────────────────────────────────────────────── */
-* { box-sizing: border-box; }
+/* ── Reset & Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #1a1612;
+  --surface:   #24201a;
+  --border:    #3a3228;
+  --accent:    #c9943a;
+  --accent-dim:#7a5820;
+  --text:      #e8dcc8;
+  --text-dim:  #8a7d6a;
+  --narrate:   #b8d4b8;
+  --roll:      #f0c060;
+  --system:    #7ab0d0;
+  --radius:    8px;
+  --font:      'Georgia', serif;
+}
 
 body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #f6f7fb;
-  color: #1f2937;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ── Layout ────────────────────────────────────────────────── */
-main {
-  max-width: 720px;
-  margin: 3rem auto;
+.hidden { display: none !important; }
+
+/* ── Join Screen ────────────────────────────────────────────────────────── */
+#join-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.join-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.join-title {
+  font-size: 1.6rem;
+  color: var(--accent);
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+.join-sub {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Shared Input / Button ──────────────────────────────────────────────── */
+input[type="text"], input[type="file"], select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input[type="text"]:focus, select:focus {
+  border-color: var(--accent-dim);
+}
+
+button {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #1a1612;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 0.5rem 1.1rem;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+button:hover  { background: #e0a840; }
+button:active { transform: scale(0.97); }
+
+/* ── Chat Screen Layout ─────────────────────────────────────────────────── */
+#chat-section {
+  display: flex;
+  width: 100%;
+  max-width: 900px;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 180px;
+  min-width: 180px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.room-label, .member-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 0.25rem;
+}
+
+#room-display {
+  font-size: 0.95rem;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.member-count {
+  font-size: 2rem;
+  color: var(--accent);
+  display: block;
+  line-height: 1;
+}
+
+/* ── Main Area ───────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 1rem;
+  gap: 0.75rem;
 }
 
-/* ── Form controls ─────────────────────────────────────────── */
-input, button {
-  padding: 0.6rem 0.8rem;
-  margin-right: 0.5rem;
-}
-
-/* ── Message feed ──────────────────────────────────────────── */
-#messages {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  min-height: 240px;
-  max-height: 320px;
+/* ── Message Feed ────────────────────────────────────────────────────────── */
+.message-feed {
+  flex: 1;
   overflow-y: auto;
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
-/* ── Live member counter ──────────────────────────────────── */
-#member-count {
-  margin: 0.5rem 0 0;
-  font-size: 0.875rem;
-  color: #6b7280;
+.msg {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text);
 }
+
+.msg--system  { color: var(--system);  font-style: italic; font-size: 0.82rem; }
+.msg--narrate { color: var(--narrate); font-style: italic; }
+.msg--roll    { color: var(--roll); }
+.msg--trade a { color: var(--accent); }
+
+/* ── Input Row ───────────────────────────────────────────────────────────── */
+.input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-row input { flex: 1; }
+
+/* ── Panels (dice / DM / trade) ──────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.panel-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  min-width: 70px;
+}
+
+.dice-btn {
+  background: var(--bg);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+  border-radius: 6px;
+}
+
+.dice-btn:hover { background: var(--accent-dim); color: var(--text); }
