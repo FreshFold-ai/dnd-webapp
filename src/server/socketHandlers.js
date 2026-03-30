@@ -9,6 +9,10 @@
 
 const { getRoomSize, emitRoomCount } = require("../helpers/room");
 
+// In memory storage
+const roomMessages = {}; // { roomId: [messages] }
+const userLastMessageTime = {}; // rate limiting
+
 /**
  * registerSocketHandlers — attaches the "connection" listener to the
  * Socket.IO server and registers per-socket event handlers inside it.
@@ -28,6 +32,7 @@ function registerSocketHandlers(io) {
    * Output: registers the event listeners described below.
    */
   io.on("connection", (socket) => {
+    console.log(`[CONNECT] ${socket.id}`);
 
     /**
      * Event: room:join
@@ -60,6 +65,14 @@ function registerSocketHandlers(io) {
 
       // Subscribe this socket to the room channel
       socket.join(roomId);
+
+      // Log the join event on the server console
+      console.log(`[JOIN] ${username} joined ${roomId}`);
+
+      // Initialize message history for the room if it doesn't exist
+      if (!roomMessages[roomId]) {
+        roomMessages[roomId] = [];
+      }
 
       // Notify existing room members that someone new arrived
       socket.to(roomId).emit("user:joined", {
@@ -98,12 +111,52 @@ function registerSocketHandlers(io) {
       // Guard: sender must have joined and provided a non-empty message
       if (!roomId || !username || !text) return;
 
+      // Additional validation: non-empty and max length
+      if (typeof text !== "string" || !text.trim()) {
+        socket.emit("error", "Message cannot be empty");
+        return;
+      }
+
+      // Max length check (e.g., 300 chars)
+      if (text.length > 300) {
+        socket.emit("error", "Message too long (max 300 chars)");
+        return;
+      }
+
+      // Rate limiting: allow max 1 message per second per user
+      const now = Date.now();
+      const lastTime = userLastMessageTime[socket.id] || 0;
+
+      if (now - lastTime < 1000) {
+        socket.emit("error", "You're sending messages too fast");
+        return;
+      }
+
+      userLastMessageTime[socket.id] = now;
+
+
+
       // Broadcast the message to everyone in the room (including sender)
       io.to(roomId).emit("room:message", {
         from: username,
         text,
         at: new Date().toISOString()
       });
+
+      // Store the message in the room's history (in-memory)
+      if (!roomMessages[roomId]) {
+        roomMessages[roomId] = [];
+      }
+
+      roomMessages[roomId].push({
+        from: username,
+        text: text.trim(),
+        at: new Date().toISOString()
+      });
+
+      if (roomMessages[roomId].length > 100) {
+        roomMessages[roomId].shift();
+      }
     });
 
     /**
@@ -124,6 +177,9 @@ function registerSocketHandlers(io) {
     socket.on("disconnect", () => {
       const { roomId, username } = socket.data || {};
       if (!roomId || !username) return;
+
+      // Log the disconnect event on the server console
+      console.log(`[DISCONNECT] ${username} left ${roomId}`);
 
       // Notify remaining room members
       socket.to(roomId).emit("user:left", { username });
