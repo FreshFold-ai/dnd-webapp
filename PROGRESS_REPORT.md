@@ -5,7 +5,7 @@ Last Commit: def66f2, March 25, 2026
 
 ### Who is in our group?
 
-Kobe, Devon, Urvish, Brandon.
+Kobe, Devin, Urvish, Brandon.
 
 ### What is our project?
 
@@ -40,7 +40,7 @@ We have grouped our remaining tasks by priority and assigned them to team member
 7. Add server logging for requests, events, and errors.
 8. Add error handling on both server and client.
 
-#### User system and UI. Assigned to Devon.
+#### User system and UI. Assigned to Devin.
 
 9. Build user registration and login.
 10. Build a user roster sidebar that shows who is in the room.
