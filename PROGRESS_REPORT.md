@@ -20,7 +20,7 @@ An Express server that serves static files and runs Socket.IO on localhost:3000.
 
 Our project has 116 lines of actual code across 4 JavaScript files. The rest of the 463 total lines are comments, blanks, HTML, and CSS. We have 0 test files so far.
 
-When we run it locally and open two browser tabs, we can type a username and room name, send messages between tabs, and see a member count update. That is the full extent of our current functionality.
+When we run it locally and open two browser tabs, we can type a username and room name, send messages and files between tabs, and see a member count update. Added a dice roll function up to a D20. That is the full extent of our current functionality.
 
 ### What needs to be done
 
