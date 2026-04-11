@@ -45,8 +45,30 @@ registerSocketHandlers(io);
 
 /* ── Start ─────────────────────────────────────────────────── */
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+
+  const tunnelType = process.env.TUNNEL; // 'localtunnel' or 'ngrok'
+  if (tunnelType) {
+    (async () => {
+      try {
+        const { startTunnel } = require("./tunnel");
+        const tunnel = await startTunnel(PORT, { type: tunnelType, subdomain: process.env.TUNNEL_SUBDOMAIN });
+        if (tunnel && tunnel.url) {
+          console.log(`[TUNNEL] Public URL: ${tunnel.url}`);
+          app.locals.tunnelUrl = tunnel.url;
+          const cleanup = async () => {
+            try { await tunnel.close(); } catch (e) {}
+            process.exit(0);
+          };
+          process.on("SIGINT", cleanup);
+          process.on("SIGTERM", cleanup);
+        }
+      } catch (err) {
+        console.error("[TUNNEL] Failed to start tunnel:", err);
+      }
+    })();
+  }
 });
 
 // HANDLE CRASHES
