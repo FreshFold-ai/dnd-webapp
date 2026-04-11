@@ -21,6 +21,8 @@ function registerSocketHandlers(io) {
       socket.data.username = username;
 
       socket.join(roomId);
+      // Notify the joining socket that it successfully joined
+      socket.emit("room:joined", { roomId, socketId: socket.id });
       console.log(`[JOIN] ${username} joined ${roomId}`);
 
       if (!roomMessages[roomId]) {
