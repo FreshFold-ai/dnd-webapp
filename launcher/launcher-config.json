@@ -1,0 +1,8 @@
+{
+  "port": 3000,
+  "preferredTunnel": "localtunnel",
+  "ngrokAuthtoken": "",
+  "openBrowser": true,
+  "serverCmd": "node src/server/index.js",
+  "waitTimeoutMs": 60000
+}

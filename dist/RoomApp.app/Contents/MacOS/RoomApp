@@ -1,0 +1,5 @@
+#!/bin/bash
+# Minimal launcher executable script for macOS .app bundle
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$DIR"
+exec node launcher/start-app.js

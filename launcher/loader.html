@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Room App — Installer</title>
+  <style>
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding: 20px; }
+    #log { background: #0b0b0b; color: #dcdcdc; padding: 10px; height: 320px; overflow:auto; white-space: pre-wrap; }
+    #status { margin-bottom: 12px; }
+    button { padding: 8px 12px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Room App — Setup</h1>
+  <div id="status">Dependencies appear to be missing. Click <strong>Install</strong> to download required packages.</div>
+  <div><button id="installBtn">Install dependencies</button></div>
+  <div id="spinner" style="display:none;margin-top:10px">Installing…</div>
+  <pre id="log"></pre>
+
+  <script>
+    const installBtn = document.getElementById('installBtn');
+    const spinner = document.getElementById('spinner');
+    const logEl = document.getElementById('log');
+
+    function startEvents() {
+      const es = new EventSource('/events');
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.type === 'log') {
+            logEl.textContent += data.text;
+            logEl.scrollTop = logEl.scrollHeight;
+          } else if (data.type === 'done') {
+            spinner.style.display = 'none';
+            installBtn.disabled = false;
+            if (data.success) {
+              document.getElementById('status').textContent = 'Install complete. You can close this window.';
+            } else {
+              document.getElementById('status').textContent = 'Install failed. Check logs and retry.';
+            }
+            es.close();
+          }
+        } catch (e) {}
+      };
+      es.onerror = (e) => { console.error('SSE error', e); };
+    }
+
+    installBtn.addEventListener('click', async () => {
+      installBtn.disabled = true;
+      spinner.style.display = 'block';
+      startEvents();
+      try {
+        await fetch('/install', { method: 'POST' });
+      } catch (e) {
+        logEl.textContent += '\nFailed to start installer: ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>

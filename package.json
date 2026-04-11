@@ -6,7 +6,12 @@
   "main": "src/server/index.js",
   "scripts": {
     "start": "node src/server/index.js",
-    "dev": "node --watch src/server/index.js"
+    "dev": "node --watch src/server/index.js",
+    "tunnel:lt": "TUNNEL=localtunnel npm start",
+    "tunnel:ngrok": "TUNNEL=ngrok npm start",
+    "package:mac": "bash scripts/make-macos-app.sh",
+    "package:win": "bash scripts/build-windows-exe.sh",
+    "package:all": "npm run package:mac && npm run package:win"
   },
   "engines": {
     "node": ">=20"
@@ -15,5 +20,12 @@
     "express": "^4.19.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.3"
+    ,
+    "localtunnel": "^2.0.2",
+    "ngrok": "^4.3.0"
+  }
+  ,
+  "devDependencies": {
+    "pkg": "^5.8.0"
   }
 }
