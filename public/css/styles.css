@@ -31,10 +31,38 @@ body {
 /* ── Join Screen ────────────────────────────────────────────────────────── */
 #join-section {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: space-between;
   width: 100%;
   min-height: 100vh;
+  gap: 0;
+}
+
+.join-left {
+  flex: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.join-game-title {
+  font-size: 4rem;
+  color: var(--accent);
+  text-align: center;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+}
+
+.join-right {
+  flex: 1;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
 }
 
 .join-card {

@@ -10,12 +10,17 @@
 
   <!-- ── Join Screen ───────────────────────────────────────── -->
   <div id="join-section">
-    <div class="join-card">
-      <h1 class="join-title">⚔️ Enter the Tavern</h1>
-      <p class="join-sub">Type <strong>DM</strong> as your name to become the Dungeon Master.</p>
-      <input id="room-id"   type="text" placeholder="Room name (e.g. dungeon-1)" />
-      <input id="username"  type="text" placeholder="Your adventurer name" />
-      <button onclick="joinRoomFromInputs()">Join Quest</button>
+    <div class="join-left">
+      <h1 class="join-game-title game-text">GAME</h1>
+    </div>
+    <div class="join-right">
+      <div class="join-card">
+        <h1 class="join-title">⚔️ Enter the Tavern</h1>
+        <p class="join-sub">Type <strong>DM</strong> as your name to become the Dungeon Master.</p>
+        <input id="room-id"   type="text" placeholder="Room name (e.g. dungeon-1)" />
+        <input id="username"  type="text" placeholder="Your adventurer name" />
+        <button onclick="joinRoomFromInputs()">Join Quest</button>
+      </div>
     </div>
   </div>
 
@@ -85,7 +90,33 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
   <script src="/js/app.js"></script>
+  <script>
+    // ── Game Text Animation ────────────────────────────────────────
+    const gameText = document.querySelector('.game-text');
+    
+    if (gameText) {
+      // Vertical floating animation
+      anime({
+        targets: ".game-text",
+        translateY: [-10, 10],
+        duration: 1200,
+        direction: "alternate",
+        loop: true,
+        easing: "easeInOutSine"
+      });
+
+      // Opacity pulse animation
+      anime({
+        targets: ".game-text",
+        opacity: [0.5, 1],
+        duration: 1600,
+        direction: "alternate",
+        loop: true
+      });
+    }
+  </script>
   <script>
     // Show room name in sidebar after joining
     socket.on('room:joined', ({ roomId }) => {
