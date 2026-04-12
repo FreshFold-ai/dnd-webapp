@@ -25,6 +25,11 @@ const io = new Server(server);
 /** Port the server listens on.  Overridable via the PORT env var. */
 const PORT = process.env.PORT || 3000;
 
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${req.method} ${req.originalUrl} from ${req.ip}`);
+  next();
+});
+
 /**
  * Static file middleware.
  *
@@ -32,6 +37,14 @@ const PORT = process.env.PORT || 3000;
  * Output: The matched static file (HTML, CSS, JS, images, etc.).
  */
 app.use(express.static(path.join(__dirname, "..", "..", "public")));
+
+app.use((err, req, res, next) => {
+  console.error('[HTTP ERROR]', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || 500).json({ error: 'Internal server error' });
+});
 
 /* ── Socket.IO setup ───────────────────────────────────────── */
 
