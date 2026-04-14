@@ -40,13 +40,21 @@ function addMessage(text, type = 'chat') {
   p.textContent = text;
   feed.appendChild(p);
   feed.scrollTop = feed.scrollHeight;
+  
+}
+
+function displayError(message) {
+  addMessage(`Error: ${message}`, 'error');
 }
  
 // ─── Join ─────────────────────────────────────────────────────────────────────
 function joinRoomFromInputs() {
   const roomId   = roomIdInput.value.trim();
   const username = usernameInput.value.trim();
-  if (!roomId || !username) return;
+  if (!roomId || !username) {
+    displayError('Room and username are required.');
+    return;
+  }
  
   myRoomId   = roomId;
   myUsername = username;
@@ -58,7 +66,10 @@ function joinRoomFromInputs() {
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 function sendMessageFromInput() {
   const text = messageInput.value.trim();
-  if (!text) return;
+  if (!text) {
+    displayError('Message cannot be empty.');
+    return;
+  }
   socket.emit('room:message', { text });
   messageInput.value = '';
 }
@@ -191,6 +202,28 @@ socket.on('room:count', ({ count }) => {
   memberCount.textContent = count;
 });
  
+socket.on('room:history', (messages) => {
+  if (!Array.isArray(messages) || messages.length === 0) return;
+  addMessage('--- Recent room history ---', 'system');
+  messages.forEach(({ from, text }) => {
+    addMessage(`${from}: ${text}`);
+  });
+  addMessage('--- End room history ---', 'system');
+});
+
+socket.on('server:error', ({ message }) => {
+  displayError(message || 'An unknown server error occurred.');
+});
+
+socket.on('connect_error', (error) => {
+  displayError(`Connection failed: ${error && error.message ? error.message : error}`);
+  console.error('[CONNECT ERROR]', error);
+});
+
+socket.on('disconnect', (reason) => {
+  addMessage(`Disconnected from server: ${reason}`, 'error');
+});
+
 socket.on('user:joined', ({ socketId, username }) => {
   addMessage(`${username} joined the party.`, 'system');
   // We initiate the WebRTC offer to the newcomer

@@ -14,6 +14,14 @@ function registerSocketHandlers(io) {
   io.on("connection", (socket) => {
     console.log(`[CONNECT] ${socket.id}`);
 
+    socket.onAny((event, ...args) => {
+      console.log(`[EVENT] ${socket.id} ${event}`, args);
+    });
+
+    socket.on("error", (err) => {
+      console.error(`[SOCKET ERROR] ${socket.id}`, err);
+    });
+
     socket.on("room:join", ({ roomId, username }) => {
       if (!roomId || !username) return;
 
@@ -23,6 +31,7 @@ function registerSocketHandlers(io) {
       socket.join(roomId);
       // Notify the joining socket that it successfully joined
       socket.emit("room:joined", { roomId, socketId: socket.id });
+      socket.emit("room:history", roomMessages[roomId] || []);
       console.log(`[JOIN] ${username} joined ${roomId}`);
 
       if (!roomMessages[roomId]) {
@@ -43,12 +52,12 @@ function registerSocketHandlers(io) {
       if (!roomId || !username || !text) return;
 
       if (typeof text !== "string" || !text.trim()) {
-        socket.emit("error", "Message cannot be empty");
+        socket.emit("server:error", { message: "Message cannot be empty" });
         return;
       }
 
       if (text.length > 300) {
-        socket.emit("error", "Message too long (max 300 chars)");
+        socket.emit("server:error", { message: "Message too long (max 300 chars)" });
         return;
       }
 
@@ -56,7 +65,7 @@ function registerSocketHandlers(io) {
       const lastTime = userLastMessageTime[socket.id] || 0;
 
       if (now - lastTime < 1000) {
-        socket.emit("error", "You're sending messages too fast");
+        socket.emit("server:error", { message: "You're sending messages too fast" });
         return;
       }
 
