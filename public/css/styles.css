@@ -91,7 +91,7 @@ body {
 }
 
 /* ── Shared Input / Button ──────────────────────────────────────────────── */
-input[type="text"], input[type="file"], select {
+input[type="text"], input[type="email"], input[type="password"], input[type="file"], select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);

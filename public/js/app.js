@@ -49,12 +49,11 @@ function displayError(message) {
  
 // ─── Join ─────────────────────────────────────────────────────────────────────
 function joinRoomFromInputs() {
-  const roomId   = roomIdInput.value.trim();
-  const username = usernameInput.value.trim();
-  if (!roomId || !username) {
-    displayError('Room and username are required.');
-    return;
-  }
+  const roomIdEl   = roomIdInput || document.getElementById('room-id');
+  const usernameEl = usernameInput || document.getElementById('username');
+  const roomId     = roomIdEl?.value.trim() || '';
+  const username   = usernameEl?.value.trim() || '';
+  if (!roomId || !username) return;
  
   myRoomId   = roomId;
   myUsername = username;
