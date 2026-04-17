@@ -5,6 +5,7 @@ const socket = io();
 let myUsername = '';
 let myRoomId = '';
 let isDM = false;
+let myAvatar = '🧙';
  
 // peerConnections: Map<socketId, RTCPeerConnection>
 const peerConnections = {};
@@ -17,8 +18,8 @@ const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
  
 // ─── DOM Refs ─────────────────────────────────────────────────────────────────
 let feed, memberCount, joinSection, chatSection;
-let roomIdInput, usernameInput, messageInput;
-let diceSection, dmSection, narrateInput, tradeSection;
+let roomIdInput, usernameInput, messageInput, avatarSelect;
+let diceSection, dmSection, narrateInput, tradeSection, avatarDisplay, connectionStatus;
 
 document.addEventListener('DOMContentLoaded', () => {
   feed          = document.getElementById('message-feed');
@@ -32,6 +33,13 @@ document.addEventListener('DOMContentLoaded', () => {
   dmSection     = document.getElementById('dm-section');
   narrateInput  = document.getElementById('narrate-input');
   tradeSection  = document.getElementById('trade-section');
+  avatarSelect  = document.getElementById('avatar-select');
+  avatarDisplay = document.getElementById('avatar-display');
+  connectionStatus = document.getElementById('connection-status');
+
+  if (avatarSelect) {
+    avatarSelect.addEventListener('change', updateAvatarDisplay);
+  }
 });
 // ─── UI Helpers ───────────────────────────────────────────────────────────────
 function addMessage(text, type = 'chat') {
@@ -46,6 +54,15 @@ function addMessage(text, type = 'chat') {
 function displayError(message) {
   addMessage(`Error: ${message}`, 'error');
 }
+
+function updateAvatarDisplay() {
+  const avatar = avatarSelect?.value || myAvatar || '🧙';
+  myAvatar = avatar;
+  if (!avatarDisplay) return;
+
+  avatarDisplay.textContent = avatar;
+  avatarDisplay.classList.remove('hidden');
+}
  
 // ─── Join ─────────────────────────────────────────────────────────────────────
 function joinRoomFromInputs() {
@@ -57,8 +74,10 @@ function joinRoomFromInputs() {
  
   myRoomId   = roomId;
   myUsername = username;
+  myAvatar   = avatarSelect?.value || myAvatar;
   isDM       = username.toLowerCase() === 'dm';
  
+  updateAvatarDisplay();
   socket.emit('room:join', { roomId, username });
 }
  
@@ -186,6 +205,33 @@ function sendFileToPeer(targetId, file) {
   readSlice(0);
 }
  
+// ─── Connection Status ──────────────────────────────────────────────────────────
+function updateConnectionStatus(status) {
+  if (!connectionStatus) return;
+  
+  connectionStatus.classList.remove('connection-status--connected', 'connection-status--disconnected', 'connection-status--reconnecting');
+  const dot = connectionStatus.querySelector('.connection-dot');
+  const text = connectionStatus.querySelector('.connection-text');
+  
+  switch (status) {
+    case 'connected':
+      connectionStatus.classList.add('connection-status--connected');
+      text.textContent = 'Connected';
+      connectionStatus.setAttribute('title', 'Connected to server');
+      break;
+    case 'disconnected':
+      connectionStatus.classList.add('connection-status--disconnected');
+      text.textContent = 'Disconnected';
+      connectionStatus.setAttribute('title', 'Disconnected from server');
+      break;
+    case 'reconnecting':
+      connectionStatus.classList.add('connection-status--reconnecting');
+      text.textContent = 'Reconnecting…';
+      connectionStatus.setAttribute('title', 'Attempting to reconnect to server');
+      break;
+  }
+}
+ 
 // ─── Socket Event Listeners ───────────────────────────────────────────────────
  
 socket.on('room:joined', ({ roomId, socketId }) => {
@@ -217,10 +263,32 @@ socket.on('server:error', ({ message }) => {
 socket.on('connect_error', (error) => {
   displayError(`Connection failed: ${error && error.message ? error.message : error}`);
   console.error('[CONNECT ERROR]', error);
+  updateConnectionStatus('disconnected');
 });
 
 socket.on('disconnect', (reason) => {
   addMessage(`Disconnected from server: ${reason}`, 'error');
+  updateConnectionStatus('disconnected');
+});
+
+socket.on('connect', () => {
+  updateConnectionStatus('connected');
+  addMessage('Connected to server.', 'system');
+});
+
+socket.on('reconnect', () => {
+  updateConnectionStatus('connected');
+  addMessage('Reconnected to server.', 'system');
+});
+
+socket.on('reconnect_attempt', () => {
+  updateConnectionStatus('reconnecting');
+  addMessage('Attempting to reconnect to server…', 'system');
+});
+
+socket.on('reconnect_error', (error) => {
+  updateConnectionStatus('disconnected');
+  console.error('[RECONNECT ERROR]', error);
 });
 
 socket.on('user:joined', ({ socketId, username }) => {

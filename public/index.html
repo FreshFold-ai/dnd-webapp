@@ -29,6 +29,12 @@
   <!-- ── Chat / Game Screen ────────────────────────────────── -->
   <div id="chat-section" class="hidden">
 
+    <!-- Connection Status Indicator -->
+    <div id="connection-status" class="connection-status connection-status--connected" title="Connected to server">
+      <div class="connection-dot"></div>
+      <span class="connection-text">Connected</span>
+    </div>
+
     <aside class="sidebar">
       <div class="room-info">
         <span class="room-label">Room</span>
@@ -54,7 +60,9 @@
     <main class="main">
 
       <!-- Message feed -->
-      <div id="message-feed" class="message-feed"></div>
+      <div id="message-feed" class="message-feed">
+        <div id="avatar-display" class="avatar-display hidden"></div>
+      </div>
 
       <!-- Chat input -->
       <div class="input-row">
