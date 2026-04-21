@@ -20,6 +20,7 @@ const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 let feed, memberCount, joinSection, chatSection;
 let roomIdInput, usernameInput, messageInput, avatarSelect;
 let diceSection, dmSection, narrateInput, tradeSection, avatarDisplay, connectionStatus;
+let userRoster, loadingScreen;
 
 document.addEventListener('DOMContentLoaded', () => {
   feed          = document.getElementById('message-feed');
@@ -36,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
   avatarSelect  = document.getElementById('avatar-select');
   avatarDisplay = document.getElementById('avatar-display');
   connectionStatus = document.getElementById('connection-status');
+  userRoster    = document.getElementById('user-roster');
+  loadingScreen = document.getElementById('loading-screen');
 
   if (avatarSelect) {
     avatarSelect.addEventListener('change', updateAvatarDisplay);
@@ -64,6 +67,22 @@ function updateAvatarDisplay() {
   avatarDisplay.classList.remove('hidden');
 }
  
+// ─── Update User Roster ───────────────────────────────────────────────────────
+function updateUserRoster(users) {
+  if (!userRoster) return;
+  
+  userRoster.innerHTML = '';
+  users.forEach((username, index) => {
+    const userDiv = document.createElement('div');
+    userDiv.className = 'user-item';
+    userDiv.textContent = `${index + 1}. ${username}`;
+    if (username === myUsername) {
+      userDiv.classList.add('user-item--self');
+    }
+    userRoster.appendChild(userDiv);
+  });
+}
+ 
 // ─── Join ─────────────────────────────────────────────────────────────────────
 function joinRoomFromInputs() {
   const roomIdEl   = roomIdInput || document.getElementById('room-id');
@@ -79,8 +98,19 @@ function joinRoomFromInputs() {
  
   updateAvatarDisplay();
   socket.emit('room:join', { roomId, username });
+  if (loadingScreen) loadingScreen.classList.remove('hidden');
 }
- 
+
+// ─── Go Back to Join Screen ──────────────────────────────────────────────────
+function goBackToJoin() {
+  chatSection.classList.add('hidden');
+  joinSection.classList.remove('hidden');
+  diceSection.classList.add('hidden');
+  tradeSection.classList.add('hidden');
+  dmSection.classList.add('hidden');
+  // Optionally emit leave room or reset state
+}
+
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 function sendMessageFromInput() {
   const text = messageInput.value.trim();
@@ -183,7 +213,12 @@ function sendFileToPeer(targetId, file) {
     addMessage('No open P2P channel to that player yet.', 'system');
     return;
   }
- 
+
+  // Show loading screen
+  if (loadingScreen) {
+    loadingScreen.classList.remove('hidden');
+  }
+
   // Send metadata first, then the raw file in chunks
   channel.send(JSON.stringify({ name: file.name, size: file.size }));
  
@@ -195,7 +230,13 @@ function sendFileToPeer(targetId, file) {
     channel.send(e.target.result);
     offset += e.target.result.byteLength;
     if (offset < file.size) readSlice(offset);
-    else addMessage(`Sent "${file.name}" to ${targetId.slice(0, 6)}…`, 'system');
+    else {
+      addMessage(`Sent "${file.name}" to ${targetId.slice(0, 6)}…`, 'system');
+      // Hide loading screen
+      if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+      }
+    }
   };
  
   function readSlice(o) {
@@ -235,6 +276,7 @@ function updateConnectionStatus(status) {
 // ─── Socket Event Listeners ───────────────────────────────────────────────────
  
 socket.on('room:joined', ({ roomId, socketId }) => {
+  if (loadingScreen) loadingScreen.classList.add('hidden');
   joinSection.classList.add('hidden');
   chatSection.classList.remove('hidden');
   diceSection.classList.remove('hidden');
@@ -245,6 +287,10 @@ socket.on('room:joined', ({ roomId, socketId }) => {
  
 socket.on('room:count', ({ count }) => {
   memberCount.textContent = count;
+});
+
+socket.on('room:users', ({ users }) => {
+  updateUserRoster(users);
 });
  
 socket.on('room:history', (messages) => {

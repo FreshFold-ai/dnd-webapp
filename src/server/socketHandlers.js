@@ -9,6 +9,16 @@ const { getRoomSize, emitRoomCount } = require("../helpers/room");
 // In memory storage
 const roomMessages = {}; // { roomId: [messages] }
 const userLastMessageTime = {}; // rate limiting
+const roomUsers = {}; // { roomId: { socketId: username } }
+
+/**
+ * emitRoomUsers — broadcasts the current user list to every socket in the room.
+ */
+function emitRoomUsers(io, roomId) {
+  if (!roomUsers[roomId]) return;
+  const users = Object.values(roomUsers[roomId]);
+  io.to(roomId).emit("room:users", { users });
+}
 
 function registerSocketHandlers(io) {
   io.on("connection", (socket) => {
@@ -38,12 +48,18 @@ function registerSocketHandlers(io) {
         roomMessages[roomId] = [];
       }
 
+      if (!roomUsers[roomId]) {
+        roomUsers[roomId] = {};
+      }
+      roomUsers[roomId][socket.id] = username;
+
       socket.to(roomId).emit("user:joined", {
         socketId: socket.id,
         username,
       });
 
       emitRoomCount(io, roomId);
+      emitRoomUsers(io, roomId);
     });
 
     socket.on("room:message", ({ text }) => {
@@ -148,8 +164,16 @@ function registerSocketHandlers(io) {
 
       console.log(`[DISCONNECT] ${username} left ${roomId}`);
 
+      if (roomUsers[roomId] && roomUsers[roomId][socket.id]) {
+        delete roomUsers[roomId][socket.id];
+        if (Object.keys(roomUsers[roomId]).length === 0) {
+          delete roomUsers[roomId];
+        }
+      }
+
       socket.to(roomId).emit("user:left", { username });
       emitRoomCount(io, roomId);
+      emitRoomUsers(io, roomId);
     });
   });
 }

@@ -29,6 +29,9 @@
   <!-- ── Chat / Game Screen ────────────────────────────────── -->
   <div id="chat-section" class="hidden">
 
+    <!-- Back Button -->
+    <button id="back-button" class="back-button" onclick="goBackToJoin()">← Back</button>
+
     <!-- Connection Status Indicator -->
     <div id="connection-status" class="connection-status connection-status--connected" title="Connected to server">
       <div class="connection-dot"></div>
@@ -43,6 +46,10 @@
       <div class="member-box">
         <span class="member-label">Adventurers</span>
         <span id="member-count" class="member-count">0</span>
+      </div>
+      <div class="user-roster">
+        <span class="member-label">Party Roster</span>
+        <div id="user-roster" class="user-list"></div>
       </div>
       <div class="avatar-box">
         <span class="member-label">Your avatar</span>
@@ -92,7 +99,11 @@
       <div id="trade-section" class="panel hidden">
         <span class="panel-label">Trade item (P2P)</span>
         <input id="trade-target" type="text" placeholder="Target socket ID (first 6 chars)"/>
-        <input id="trade-file"   type="file"/>
+        <div class="file-row">
+          <label for="trade-file" class="file-button"> Choose File</label>
+          <div class="file-display" id="file-display"></div>
+        </div>
+        <input id="trade-file" type="file" style="display: none;"/>
         <button onclick="triggerTrade()">Send Item</button>
       </div>
 
@@ -146,6 +157,38 @@
       }
       sendFileToPeer(targetId, file);
     }
+
+    // Update file label when file selected
+    document.getElementById('trade-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const display = document.getElementById('file-display');
+      if (file) {
+        display.textContent = `(${file.name})`;
+      } else {
+        display.textContent = '';
+      }
+    });
   </script>
+
+  <!-- ── Loading Screen ────────────────────────────────────────────────────── -->
+  <div id="loading-screen" class="loading-screen hidden">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-center"></div>
+      </div>
+      <div class="loading-text">LOADING...</div>
+      <div class="loading-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
