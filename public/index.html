@@ -179,6 +179,7 @@
       <div class="round-box">
         <span class="member-label">Round</span>
         <span id="round-display" class="round-value">1</span>
+        <span id="phase-display" class="phase-value">Action Phase</span>
         <span id="turn-display" class="turn-value">No active adventurer</span>
         <button id="next-round-btn" class="hidden" onclick="advanceRound()">Next Round</button>
       </div>
@@ -191,15 +192,8 @@
         <div id="user-roster" class="user-list"></div>
       </div>
       <div id="avatar-box" class="avatar-box">
-        <span class="member-label">Your avatar</span>
-        <select id="avatar-select">
-          <option value="🧙">🧙 Wizard</option>
-          <option value="⚔️">⚔️ Warrior</option>
-          <option value="🏹">🏹 Ranger</option>
-          <option value="🗡️">🗡️ Rogue</option>
-          <option value="🛡️">🛡️ Paladin</option>
-          <option value="🌿">🌿 Druid</option>
-        </select>
+        <span class="member-label">Your Character</span>
+        <div id="char-summary" class="char-summary"></div>
       </div>
 
       <!-- Inventory (players only) -->
@@ -217,27 +211,37 @@
       </div>
 
       <!-- Chat input -->
-      <div class="input-row">
+      <!-- Chat input (players only) -->
+      <div id="chat-input-row" class="input-row">
         <input id="message-input" type="text" placeholder="Say something to the party…"/>
         <button onclick="sendMessageFromInput()">Send</button>
       </div>
 
+      <div id="action-section" class="panel hidden">
+        <span class="panel-label">Round Action</span>
+        <input id="action-input" type="text" placeholder="Describe what you attempt this round…"/>
+        <button id="action-submit-btn" onclick="submitRoundAction()">Lock Action</button>
+        <span id="action-status" class="action-status">Describe one action to attempt this round.</span>
+      </div>
+
       <!-- Dice section -->
       <div id="dice-section" class="panel hidden">
-        <span class="panel-label">Roll dice</span>
-        <button class="dice-btn" onclick="rollDice(4)">d4</button>
-        <button class="dice-btn" onclick="rollDice(6)">d6</button>
-        <button class="dice-btn" onclick="rollDice(8)">d8</button>
-        <button class="dice-btn" onclick="rollDice(10)">d10</button>
-        <button class="dice-btn" onclick="rollDice(12)">d12</button>
-        <button class="dice-btn" onclick="rollDice(20)">d20</button>
+        <span class="panel-label">Action Roll</span>
+        <span id="action-check-summary" class="action-check-summary">Submit an action to receive a check.</span>
+        <button id="action-roll-btn" class="dice-btn" onclick="rollDice(20)">Roll d20</button>
       </div>
 
       <!-- DM-only narration (hidden for regular players) -->
       <div id="dm-section" class="panel hidden">
         <span class="panel-label">Set Scene</span>
         <input id="narrate-input" type="text" placeholder="Describe what happens next…"/>
-        <button onclick="sendNarration()">Narrate</button>
+        <button onclick="sendNarration()">Narrate to All</button>
+        <span class="panel-label" style="margin-top:0.5rem">Whisper to Player</span>
+        <select id="dm-whisper-target">
+          <option value="">— choose player —</option>
+        </select>
+        <input id="dm-whisper-input" type="text" placeholder="Private message…"/>
+        <button onclick="sendDmWhisper()">Send</button>
       </div>
 
       <!-- P2P item trade -->

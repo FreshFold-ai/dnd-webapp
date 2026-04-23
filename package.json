@@ -7,6 +7,9 @@
   "scripts": {
     "start": "node src/server/index.js",
     "dev": "node --watch src/server/index.js",
+    "test:room-capacity": "node scripts/test-room-capacity.js",
+    "test:room-export": "node scripts/test-room-export.js",
+    "test:smoke-export": "node scripts/test-smoke-export.js",
     "tunnel:lt": "TUNNEL=localtunnel npm start",
     "tunnel:ngrok": "TUNNEL=ngrok npm start",
     "package:mac": "bash scripts/make-macos-app.sh",

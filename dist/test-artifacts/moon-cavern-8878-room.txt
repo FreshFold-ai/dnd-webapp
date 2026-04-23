@@ -1,0 +1,299 @@
+{
+  "kind": "room",
+  "roomId": "moon-cavern-8878",
+  "roomType": "Forest",
+  "dmName": "Smoke DM",
+  "roomPassword": "evergreen",
+  "participants": [
+    {
+      "avatar": "🧙",
+      "username": "Smoke DM",
+      "className": null,
+      "race": null,
+      "level": null,
+      "isDM": true
+    },
+    {
+      "avatar": "🏹",
+      "username": "Aria",
+      "className": "Ranger",
+      "race": "Elf",
+      "level": 3,
+      "isDM": false
+    },
+    {
+      "avatar": "🛡️",
+      "username": "Borin",
+      "className": "Paladin",
+      "race": "Dwarf",
+      "level": 4,
+      "isDM": false
+    },
+    {
+      "avatar": "🔮",
+      "username": "Cyra",
+      "className": "Warlock",
+      "race": "Tiefling",
+      "level": 3,
+      "isDM": false
+    },
+    {
+      "avatar": "🗡️",
+      "username": "Dax",
+      "className": "Rogue",
+      "race": "Human",
+      "level": 2,
+      "isDM": false
+    }
+  ],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "activeTurn": "Aria",
+      "dm": [
+        {
+          "at": "2026-04-23T19:46:30.760Z",
+          "kind": "narration",
+          "text": "Mist rolls between the trees as the patrol advances."
+        },
+        {
+          "at": "2026-04-23T19:46:30.761Z",
+          "kind": "whisper",
+          "target": "Aria",
+          "visibility": "private",
+          "text": "You spot movement near the ridge."
+        },
+        {
+          "at": "2026-04-23T19:46:30.765Z",
+          "kind": "check",
+          "text": "Aria: roll d20 + Intuition (8) vs 18 for \"Scout ahead by the old trees.\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.766Z",
+          "kind": "check",
+          "text": "Borin: roll d20 + Endurance (9) vs 19 for \"Hold the line at the gate.\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.768Z",
+          "kind": "check",
+          "text": "Cyra: roll d20 + Intellect (10) vs 19 for \"Read the strange runes.\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.769Z",
+          "kind": "check",
+          "text": "Dax: roll d20 + Agility (10) vs 19 for \"Sneak through the brush.\"."
+        }
+      ],
+      "players": [
+        {
+          "at": "2026-04-23T19:46:30.760Z",
+          "actor": "Aria",
+          "kind": "chat",
+          "text": "Scouting ahead by the old trees."
+        },
+        {
+          "at": "2026-04-23T19:46:30.762Z",
+          "actor": "Aria",
+          "kind": "trade",
+          "text": "Sent Rope (50ft) to Borin"
+        },
+        {
+          "at": "2026-04-23T19:46:30.764Z",
+          "actor": "Aria",
+          "kind": "action",
+          "text": "Scout ahead by the old trees."
+        },
+        {
+          "at": "2026-04-23T19:46:30.766Z",
+          "actor": "Borin",
+          "kind": "action",
+          "text": "Hold the line at the gate."
+        },
+        {
+          "at": "2026-04-23T19:46:30.768Z",
+          "actor": "Cyra",
+          "kind": "action",
+          "text": "Read the strange runes."
+        },
+        {
+          "at": "2026-04-23T19:46:30.769Z",
+          "actor": "Dax",
+          "kind": "action",
+          "text": "Sneak through the brush."
+        },
+        {
+          "at": "2026-04-23T19:46:30.771Z",
+          "actor": "Aria",
+          "kind": "roll",
+          "text": "Locked d20 2 for \"Scout ahead by the old trees.\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.773Z",
+          "actor": "Borin",
+          "kind": "roll",
+          "text": "Locked d20 6 for \"Hold the line at the gate.\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.775Z",
+          "actor": "Cyra",
+          "kind": "roll",
+          "text": "Locked d20 15 for \"Read the strange runes.\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.777Z",
+          "actor": "Dax",
+          "kind": "roll",
+          "text": "Locked d20 8 for \"Sneak through the brush.\"."
+        }
+      ],
+      "world": [
+        {
+          "at": "2026-04-23T19:46:30.763Z",
+          "kind": "weather",
+          "text": "Weather: A cold rain starts to fall."
+        },
+        {
+          "at": "2026-04-23T19:46:30.780Z",
+          "kind": "action_result",
+          "text": "Aria: failure on \"Scout ahead by the old trees.\" (2 + 8 = 10 vs 18). The attempt falls short."
+        },
+        {
+          "at": "2026-04-23T19:46:30.780Z",
+          "kind": "action_result",
+          "text": "Borin: failure on \"Hold the line at the gate.\" (6 + 9 = 15 vs 19). The attempt falls short."
+        },
+        {
+          "at": "2026-04-23T19:46:30.780Z",
+          "kind": "action_result",
+          "text": "Cyra: success on \"Read the strange runes.\" (15 + 10 = 25 vs 19). The attempt succeeds."
+        },
+        {
+          "at": "2026-04-23T19:46:30.780Z",
+          "kind": "action_result",
+          "text": "Dax: failure on \"Sneak through the brush.\" (8 + 10 = 18 vs 19). The attempt falls short."
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "activeTurn": "Borin",
+      "dm": [
+        {
+          "at": "2026-04-23T19:46:30.785Z",
+          "kind": "prompt",
+          "text": "Spawned Fell Boar (AGGRO) targeting all players."
+        },
+        {
+          "at": "2026-04-23T19:46:30.787Z",
+          "kind": "check",
+          "text": "Borin: roll d20 + Might (9) vs 17 for encounter choice \"⚔️ Heavy strike\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.788Z",
+          "kind": "check",
+          "text": "Cyra: roll d20 + Might (4) vs 18 for encounter choice \"✊ Demand surrender\"."
+        },
+        {
+          "at": "2026-04-23T19:46:30.789Z",
+          "kind": "check",
+          "text": "Dax: roll d20 + Might (6) vs 17 for encounter choice \"😤 Intimidate them\"."
+        },
+        {
+          "at": "2026-04-23T19:46:31.193Z",
+          "kind": "resolution",
+          "text": "Fell Boar (AGGRO) resolved as death. Fell Boar falls with a final cry. Party impact: Borin forces the encounter open. Aria keeps the party coordinated."
+        }
+      ],
+      "players": [
+        {
+          "at": "2026-04-23T19:46:30.786Z",
+          "actor": "Aria",
+          "kind": "encounter_decision",
+          "text": "🎒 Use an item (no roll required)"
+        },
+        {
+          "at": "2026-04-23T19:46:30.787Z",
+          "actor": "Borin",
+          "kind": "encounter_decision",
+          "text": "⚔️ Heavy strike"
+        },
+        {
+          "at": "2026-04-23T19:46:30.788Z",
+          "actor": "Cyra",
+          "kind": "encounter_decision",
+          "text": "✊ Demand surrender"
+        },
+        {
+          "at": "2026-04-23T19:46:30.789Z",
+          "actor": "Dax",
+          "kind": "encounter_decision",
+          "text": "😤 Intimidate them"
+        },
+        {
+          "at": "2026-04-23T19:46:30.789Z",
+          "actor": "Borin",
+          "kind": "encounter_roll",
+          "text": "Locked d20 9 for \"⚔️ Heavy strike\" (9 + 9 = 18 vs 17, success)."
+        },
+        {
+          "at": "2026-04-23T19:46:30.790Z",
+          "actor": "Cyra",
+          "kind": "encounter_roll",
+          "text": "Locked d20 12 for \"✊ Demand surrender\" (12 + 4 = 16 vs 18, failure)."
+        },
+        {
+          "at": "2026-04-23T19:46:30.790Z",
+          "actor": "Dax",
+          "kind": "encounter_roll",
+          "text": "Locked d20 9 for \"😤 Intimidate them\" (9 + 6 = 15 vs 17, failure)."
+        }
+      ],
+      "world": [
+        {
+          "at": "2026-04-23T19:46:30.780Z",
+          "kind": "round_transition",
+          "text": "Round 2 begins. Active turn: Borin."
+        },
+        {
+          "at": "2026-04-23T19:46:30.790Z",
+          "kind": "encounter_ready",
+          "text": "Fell Boar is ready to resolve when the DM advances the round."
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "activeTurn": "Cyra",
+      "dm": [],
+      "players": [],
+      "world": [
+        {
+          "at": "2026-04-23T19:46:31.194Z",
+          "kind": "round_transition",
+          "text": "Round 3 begins. Active turn: Cyra."
+        }
+      ]
+    }
+  ],
+  "portableState": {
+    "environment": [
+      {
+        "type": "weather",
+        "detail": "A cold rain starts to fall.",
+        "at": "2026-04-23T19:46:30.763Z"
+      }
+    ],
+    "encounters": [
+      {
+        "eid": "enc_moon-cavern-8878_1776973590783",
+        "npcName": "Fell Boar",
+        "npcRole": "aggro",
+        "outcome": "death",
+        "flavor": "Fell Boar falls with a final cry. Party impact: Borin forces the encounter open. Aria keeps the party coordinated.",
+        "forced": false,
+        "at": "2026-04-23T19:46:31.193Z"
+      }
+    ]
+  },
+  "exportedAt": "2026-04-23T19:46:31.303Z"
+}

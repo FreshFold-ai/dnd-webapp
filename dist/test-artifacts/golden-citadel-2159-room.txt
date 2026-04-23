@@ -1,0 +1,196 @@
+{
+  "kind": "room",
+  "roomId": "golden-citadel-2159",
+  "roomType": "Forest",
+  "dmName": "Smoke DM",
+  "roomPassword": "evergreen",
+  "participants": [
+    {
+      "avatar": "🧙",
+      "username": "Smoke DM",
+      "className": null,
+      "race": null,
+      "level": null,
+      "isDM": true
+    },
+    {
+      "avatar": "🏹",
+      "username": "Aria",
+      "className": "Ranger",
+      "race": "Elf",
+      "level": 3,
+      "isDM": false
+    },
+    {
+      "avatar": "🛡️",
+      "username": "Borin",
+      "className": "Paladin",
+      "race": "Dwarf",
+      "level": 4,
+      "isDM": false
+    },
+    {
+      "avatar": "🔮",
+      "username": "Cyra",
+      "className": "Warlock",
+      "race": "Tiefling",
+      "level": 3,
+      "isDM": false
+    },
+    {
+      "avatar": "🗡️",
+      "username": "Dax",
+      "className": "Rogue",
+      "race": "Human",
+      "level": 2,
+      "isDM": false
+    }
+  ],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "activeTurn": "Aria",
+      "dm": [
+        {
+          "at": "2026-04-23T18:34:32.633Z",
+          "kind": "narration",
+          "text": "Mist rolls between the trees as the patrol advances."
+        },
+        {
+          "at": "2026-04-23T18:34:32.634Z",
+          "kind": "whisper",
+          "target": "Aria",
+          "visibility": "private",
+          "text": "You spot movement near the ridge."
+        }
+      ],
+      "players": [
+        {
+          "at": "2026-04-23T18:34:32.630Z",
+          "actor": "Aria",
+          "kind": "chat",
+          "text": "Scouting ahead by the old trees."
+        },
+        {
+          "at": "2026-04-23T18:34:32.631Z",
+          "actor": "Borin",
+          "kind": "action",
+          "text": "Raise shield wall"
+        },
+        {
+          "at": "2026-04-23T18:34:32.632Z",
+          "actor": "Cyra",
+          "kind": "roll",
+          "text": "Rolled d20 = 17"
+        },
+        {
+          "at": "2026-04-23T18:34:32.635Z",
+          "actor": "Aria",
+          "kind": "trade",
+          "text": "Sent Rope (50ft) to Borin"
+        }
+      ],
+      "world": [
+        {
+          "at": "2026-04-23T18:34:32.635Z",
+          "kind": "weather",
+          "text": "Weather: A cold rain starts to fall."
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "activeTurn": "Borin",
+      "dm": [
+        {
+          "at": "2026-04-23T18:34:32.640Z",
+          "kind": "prompt",
+          "text": "Spawned Fell Boar (AGGRO) targeting all players."
+        },
+        {
+          "at": "2026-04-23T18:34:32.647Z",
+          "kind": "resolution",
+          "text": "Fell Boar (AGGRO) resolved as death. Fell Boar collapses, dropping their gear."
+        }
+      ],
+      "players": [
+        {
+          "at": "2026-04-23T18:34:32.640Z",
+          "actor": "Aria",
+          "kind": "encounter_decision",
+          "text": "🤝 Propose a deal"
+        },
+        {
+          "at": "2026-04-23T18:34:32.641Z",
+          "actor": "Borin",
+          "kind": "encounter_decision",
+          "text": "🤝 Propose a deal"
+        },
+        {
+          "at": "2026-04-23T18:34:32.642Z",
+          "actor": "Cyra",
+          "kind": "encounter_decision",
+          "text": "⚔️ Attack directly"
+        },
+        {
+          "at": "2026-04-23T18:34:32.643Z",
+          "actor": "Dax",
+          "kind": "encounter_decision",
+          "text": "⚔️ Attack directly"
+        },
+        {
+          "at": "2026-04-23T18:34:32.644Z",
+          "actor": "Aria",
+          "kind": "encounter_roll",
+          "text": "Rolled 11 (hit)"
+        },
+        {
+          "at": "2026-04-23T18:34:32.645Z",
+          "actor": "Borin",
+          "kind": "encounter_roll",
+          "text": "Rolled 12 (hit)"
+        },
+        {
+          "at": "2026-04-23T18:34:32.646Z",
+          "actor": "Cyra",
+          "kind": "encounter_roll",
+          "text": "Rolled 8 (miss)"
+        },
+        {
+          "at": "2026-04-23T18:34:32.646Z",
+          "actor": "Dax",
+          "kind": "encounter_roll",
+          "text": "Rolled 7 (miss)"
+        }
+      ],
+      "world": [
+        {
+          "at": "2026-04-23T18:34:32.637Z",
+          "kind": "round_transition",
+          "text": "Round 2 begins. Active turn: Borin."
+        }
+      ]
+    }
+  ],
+  "portableState": {
+    "environment": [
+      {
+        "type": "weather",
+        "detail": "A cold rain starts to fall.",
+        "at": "2026-04-23T18:34:32.635Z"
+      }
+    ],
+    "encounters": [
+      {
+        "eid": "enc_golden-citadel-2159_1776969272638",
+        "npcName": "Fell Boar",
+        "npcRole": "aggro",
+        "outcome": "death",
+        "flavor": "Fell Boar collapses, dropping their gear.",
+        "forced": false,
+        "at": "2026-04-23T18:34:32.647Z"
+      }
+    ]
+  },
+  "exportedAt": "2026-04-23T18:34:32.751Z"
+}

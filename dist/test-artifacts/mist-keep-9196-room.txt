@@ -1,0 +1,261 @@
+{
+  "kind": "room",
+  "roomId": "mist-keep-9196",
+  "roomType": "Forest",
+  "dmName": "Smoke DM",
+  "roomPassword": "evergreen",
+  "users": [
+    {
+      "socketId": "f0k2EtmX9zdqAuXAAAAB",
+      "username": "Smoke DM",
+      "className": null,
+      "race": null,
+      "level": null,
+      "isDM": true
+    },
+    {
+      "socketId": "vaVxaVDUPfbNhxK_AAAD",
+      "username": "Aria",
+      "className": "Ranger",
+      "race": "Elf",
+      "level": 3,
+      "isDM": false
+    },
+    {
+      "socketId": "JmZbCbU5eC47qcV8AAAF",
+      "username": "Borin",
+      "className": "Paladin",
+      "race": "Dwarf",
+      "level": 4,
+      "isDM": false
+    },
+    {
+      "socketId": "XCeblj9O1j2ZiPQCAAAH",
+      "username": "Cyra",
+      "className": "Warlock",
+      "race": "Tiefling",
+      "level": 3,
+      "isDM": false
+    },
+    {
+      "socketId": "zAL15favrqIuor1AAAAJ",
+      "username": "Dax",
+      "className": "Rogue",
+      "race": "Human",
+      "level": 2,
+      "isDM": false
+    }
+  ],
+  "chatHistory": [
+    {
+      "from": "Aria",
+      "text": "Scouting ahead by the old trees.",
+      "isDMSender": false,
+      "at": "2026-04-23T18:13:34.775Z"
+    },
+    {
+      "from": "Borin",
+      "text": "/action Raise shield wall",
+      "isDMSender": false,
+      "at": "2026-04-23T18:13:34.776Z"
+    },
+    {
+      "from": "Smoke DM",
+      "text": "[Narration] Mist rolls between the trees as the patrol advances.",
+      "isDMSender": true,
+      "at": "2026-04-23T18:13:34.781Z"
+    }
+  ],
+  "timeline": [
+    {
+      "type": "room_started",
+      "at": "2026-04-23T18:13:34.744Z",
+      "actor": "Smoke DM",
+      "actorSocketId": "f0k2EtmX9zdqAuXAAAAB",
+      "roomType": "Forest"
+    },
+    {
+      "type": "player_joined",
+      "at": "2026-04-23T18:13:34.749Z",
+      "actor": "Aria",
+      "actorSocketId": "vaVxaVDUPfbNhxK_AAAD"
+    },
+    {
+      "type": "player_joined",
+      "at": "2026-04-23T18:13:34.754Z",
+      "actor": "Borin",
+      "actorSocketId": "JmZbCbU5eC47qcV8AAAF"
+    },
+    {
+      "type": "player_joined",
+      "at": "2026-04-23T18:13:34.759Z",
+      "actor": "Cyra",
+      "actorSocketId": "XCeblj9O1j2ZiPQCAAAH"
+    },
+    {
+      "type": "player_joined",
+      "at": "2026-04-23T18:13:34.772Z",
+      "actor": "Dax",
+      "actorSocketId": "zAL15favrqIuor1AAAAJ"
+    },
+    {
+      "type": "room_message",
+      "at": "2026-04-23T18:13:34.775Z",
+      "actor": "Aria",
+      "actorSocketId": "vaVxaVDUPfbNhxK_AAAD",
+      "text": "Scouting ahead by the old trees."
+    },
+    {
+      "type": "room_message",
+      "at": "2026-04-23T18:13:34.776Z",
+      "actor": "Borin",
+      "actorSocketId": "JmZbCbU5eC47qcV8AAAF",
+      "text": "/action Raise shield wall"
+    },
+    {
+      "type": "dice_roll",
+      "at": "2026-04-23T18:13:34.778Z",
+      "actor": "Cyra",
+      "actorSocketId": "XCeblj9O1j2ZiPQCAAAH",
+      "die": 20,
+      "result": 17
+    },
+    {
+      "type": "dm_narration",
+      "at": "2026-04-23T18:13:34.781Z",
+      "actor": "Smoke DM",
+      "actorSocketId": "f0k2EtmX9zdqAuXAAAAB",
+      "text": "Mist rolls between the trees as the patrol advances."
+    },
+    {
+      "type": "dm_whisper",
+      "at": "2026-04-23T18:13:34.782Z",
+      "actor": "Smoke DM",
+      "actorSocketId": "f0k2EtmX9zdqAuXAAAAB",
+      "target": "Aria",
+      "targetSocketId": "vaVxaVDUPfbNhxK_AAAD",
+      "text": "You spot movement near the ridge.",
+      "visibility": "private"
+    },
+    {
+      "type": "trade_item",
+      "at": "2026-04-23T18:13:34.785Z",
+      "actor": "Aria",
+      "actorSocketId": "vaVxaVDUPfbNhxK_AAAD",
+      "target": "Borin",
+      "targetSocketId": "JmZbCbU5eC47qcV8AAAF",
+      "item": "Rope (50ft)"
+    },
+    {
+      "type": "environment_event",
+      "at": "2026-04-23T18:13:34.786Z",
+      "actor": "Smoke DM",
+      "eventType": "weather",
+      "detail": "A cold rain starts to fall.",
+      "target": "all"
+    },
+    {
+      "type": "round_advanced",
+      "at": "2026-04-23T18:13:34.789Z",
+      "actor": "Smoke DM",
+      "roundNumber": 2
+    },
+    {
+      "type": "npc_spawned",
+      "at": "2026-04-23T18:13:34.793Z",
+      "actor": "Smoke DM",
+      "npcType": "aggro",
+      "npcName": "Fell Boar",
+      "target": "all",
+      "encounterId": "enc_mist-keep-9196_1776968014791"
+    },
+    {
+      "type": "encounter_decision",
+      "at": "2026-04-23T18:13:34.796Z",
+      "actor": "Aria",
+      "actorSocketId": "vaVxaVDUPfbNhxK_AAAD",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "optionId": "call_for_aid",
+      "optionLabel": "📣 Call for aid"
+    },
+    {
+      "type": "encounter_decision",
+      "at": "2026-04-23T18:13:34.796Z",
+      "actor": "Borin",
+      "actorSocketId": "JmZbCbU5eC47qcV8AAAF",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "optionId": "attack_flanking",
+      "optionLabel": "⚔️ Flank the enemy"
+    },
+    {
+      "type": "encounter_decision",
+      "at": "2026-04-23T18:13:34.798Z",
+      "actor": "Cyra",
+      "actorSocketId": "XCeblj9O1j2ZiPQCAAAH",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "optionId": "call_for_aid",
+      "optionLabel": "📣 Call for aid"
+    },
+    {
+      "type": "encounter_decision",
+      "at": "2026-04-23T18:13:34.800Z",
+      "actor": "Dax",
+      "actorSocketId": "zAL15favrqIuor1AAAAJ",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "optionId": "demand_surrender",
+      "optionLabel": "✊ Demand surrender"
+    },
+    {
+      "type": "encounter_roll",
+      "at": "2026-04-23T18:13:34.802Z",
+      "actor": "Aria",
+      "actorSocketId": "vaVxaVDUPfbNhxK_AAAD",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "roll": 13,
+      "outcome": "hit"
+    },
+    {
+      "type": "encounter_roll",
+      "at": "2026-04-23T18:13:34.804Z",
+      "actor": "Borin",
+      "actorSocketId": "JmZbCbU5eC47qcV8AAAF",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "roll": 14,
+      "outcome": "hit"
+    },
+    {
+      "type": "encounter_roll",
+      "at": "2026-04-23T18:13:34.805Z",
+      "actor": "Cyra",
+      "actorSocketId": "XCeblj9O1j2ZiPQCAAAH",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "roll": 10,
+      "outcome": "miss"
+    },
+    {
+      "type": "encounter_roll",
+      "at": "2026-04-23T18:13:34.807Z",
+      "actor": "Dax",
+      "actorSocketId": "zAL15favrqIuor1AAAAJ",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "roll": 9,
+      "outcome": "miss"
+    },
+    {
+      "type": "encounter_resolved",
+      "at": "2026-04-23T18:13:34.808Z",
+      "encounterId": "enc_mist-keep-9196_1776968014791",
+      "npcName": "Fell Boar",
+      "npcRole": "aggro",
+      "outcome": "death",
+      "forced": false,
+      "flavor": "The light fades from {{npc}}'s eyes.",
+      "lootRecipients": [
+        "vaVxaVDUPfbNhxK_AAAD",
+        "JmZbCbU5eC47qcV8AAAF"
+      ]
+    }
+  ],
+  "notes": "",
+  "exportedAt": "2026-04-23T18:13:34.910Z"
+}

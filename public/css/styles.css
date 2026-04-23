@@ -440,6 +440,13 @@ button:active { transform: scale(0.97); }
   color: var(--text-dim);
 }
 
+.phase-value {
+  font-size: 0.72rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 #next-round-btn {
   margin-top: 0.3rem;
 }
@@ -504,6 +511,59 @@ button:active { transform: scale(0.97); }
   border-color: var(--accent);
   color: var(--text);
   font-weight: bold;
+}
+
+.avatar-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.45rem 0.55rem;
+}
+
+.char-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.char-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.char-summary-avatar {
+  width: 1.3rem;
+  height: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  flex: 0 0 auto;
+}
+
+.char-summary-title {
+  min-width: 0;
+}
+
+.char-summary-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.char-summary-sub,
+.char-summary-stats {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  line-height: 1.2;
 }
 
 /* ── Main Area ───────────────────────────────────────────────────────────── */
@@ -670,6 +730,16 @@ button:active { transform: scale(0.97); }
   flex-wrap: wrap;
 }
 
+#action-section,
+#dice-section {
+  align-items: flex-start;
+}
+
+#action-section input {
+  flex: 1;
+  min-width: 240px;
+}
+
 #trade-section {
   flex-direction: column;
   align-items: flex-start;
@@ -687,6 +757,21 @@ button:active { transform: scale(0.97); }
   min-width: 70px;
 }
 
+.action-status,
+.action-check-summary {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.action-status {
+  width: 100%;
+}
+
+.action-check-summary {
+  flex: 1;
+  min-width: 220px;
+}
+
 .dice-btn {
   background: var(--bg);
   border: 1px solid var(--accent-dim);
@@ -697,6 +782,13 @@ button:active { transform: scale(0.97); }
 }
 
 .dice-btn:hover { background: var(--accent-dim); color: var(--text); }
+
+.dice-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--bg);
+  color: var(--text-dim);
+}
 
 /* ── Loading Screen ────────────────────────────────────────────────────────── */
 .loading-screen {
@@ -855,33 +947,64 @@ button:active { transform: scale(0.97); }
 /* ── Inventory Sidebar ───────────────────────────────────────── */
 .inventory-box {
   margin-top: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255,255,255,0.04);
-  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
-.inventory-list { margin-top: 0.4rem; display: flex; flex-direction: column; gap: 3px; }
+.inventory-list {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
 .inv-item {
-  font-size: 0.8rem; color: var(--fg); background: rgba(255,255,255,0.06);
-  border-radius: 4px; padding: 2px 6px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
 }
-.inv-empty { font-size: 0.75rem; color: var(--muted, #888); font-style: italic; }
+.inv-item-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.inv-item-name {
+  min-width: 0;
+}
+.inv-item-tag {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  border: 1px solid rgba(201, 148, 58, 0.25);
+  background: rgba(201, 148, 58, 0.12);
+  border-radius: 999px;
+  padding: 0.12rem 0.35rem;
+}
+.inv-empty { font-size: 0.75rem; color: var(--text-dim); font-style: italic; }
 
 /* ── Trade Inventory Buttons ─────────────────────────────────── */
 .trade-inv-list { display: flex; flex-wrap: wrap; gap: 5px; margin: 0.4rem 0; }
 .trade-item-btn {
   font-size: 0.75rem; padding: 3px 8px; border-radius: 4px;
   background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-  color: var(--fg); cursor: pointer; transition: background 0.15s;
+  color: var(--text); cursor: pointer; transition: background 0.15s;
 }
 .trade-item-btn:hover { background: rgba(255,255,255,0.18); }
-.trade-item-btn.selected { background: var(--accent, #7ab0d0); color: #000; border-color: var(--accent, #7ab0d0); }
-.trade-inv-empty { font-size: 0.75rem; color: var(--muted, #888); font-style: italic; }
+.trade-item-btn.selected { background: var(--accent, #7ab0d0); color: var(--bg); border-color: var(--accent, #7ab0d0); }
+.trade-inv-empty { font-size: 0.75rem; color: var(--text-dim); font-style: italic; }
 .trade-selected-label { font-size: 0.78rem; color: var(--accent, #7ab0d0); min-height: 1.2em; }
 
 /* ── DM Spawn / Env Panels ───────────────────────────────────── */
 .panel-row { display: flex; gap: 6px; align-items: center; margin-top: 0.4rem; flex-wrap: wrap; }
 .panel-row select, .panel-row input[type="text"] { flex: 1; min-width: 100px; }
-.limit-badge { font-size: 0.7rem; font-weight: normal; color: var(--muted, #aaa); margin-left: 0.4rem; }
+.limit-badge { font-size: 0.7rem; font-weight: normal; color: var(--text-dim); margin-left: 0.4rem; }
 
 /* ── Encounter Cards ─────────────────────────────────────────── */
 .msg-card {

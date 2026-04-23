@@ -15,6 +15,9 @@ let myInventory = [];          // player's current item list
 let selectedTradeItem = null;  // item chosen for trade
 let spawnLimits = {};          // echoed from server each round
 let envLimits = {};
+let currentRoundNumber = 1;
+let currentRoundPhase = 'action';
+let myPendingRoundAction = null;
  
 // peerConnections: Map<socketId, RTCPeerConnection>
 const peerConnections = {};
@@ -36,10 +39,12 @@ let charLevelValue, charHPValue;
 let statMightValue, statAgilityValue, statEnduranceValue, statIntellectValue, statIntuitionValue, statPresenceValue;
 let diceSection, dmSection, narrateInput, tradeSection, avatarDisplay, connectionStatus;
 let userRoster, loadingScreen, snapshotSection, exportCampaignBtn, exportCharacterBtn;
-let avatarBox, roundDisplay, turnDisplay, nextRoundBtn;
+let avatarBox, charSummary, chatInputRow, roundDisplay, phaseDisplay, turnDisplay, nextRoundBtn;
+let dmWhisperTarget, dmWhisperInput;
 let inventoryBox, inventoryList, tradeInventoryButtons, tradeTargetSelect, tradeSelectedItem;
 let dmSpawnSection, dmEnvSection, spawnLimitInfo, envLimitInfo;
 let spawnNpcType, spawnNpcName, spawnTarget, envEventType, envEventDetail, envTarget;
+let actionSection, actionInput, actionStatus, actionCheckSummary, actionSubmitBtn, actionRollBtn;
 
 const ROOM_TYPES = [
   'Village', 'Township', 'City', 'Ruins', 'Castle', 'Manor', 'Desert', 'Oasis',
@@ -57,11 +62,11 @@ const EQUIPMENT_OPTIONS = [
   'Survival Kit',
   'Noble Kit'
 ];
-const AVATAR_OPTIONS = ['🧙', '⚔️', '🏹', '🗡️', '🛡️', '🌿'];
+const AVATAR_OPTIONS = ['⚔️', '🗡️', '🧙', '✨', '🏹', '🛡️', '🔮', '🎵', '🌿', '👊'];
 
 const CLASS_AVATAR_MAP = {
-  Fighter: '⚔️', Rogue: '🗡️', Wizard: '🧙', Cleric: '🛡️',
-  Ranger: '🏹', Paladin: '🛡️', Warlock: '🧙', Bard: '🌿', Druid: '🌿', Monk: '⚔️'
+  Fighter: '⚔️', Rogue: '🗡️', Wizard: '🧙', Cleric: '✨',
+  Ranger: '🏹', Paladin: '🛡️', Warlock: '🔮', Bard: '🎵', Druid: '🌿', Monk: '👊'
 };
 
 const KIT_INVENTORIES = {
@@ -72,6 +77,55 @@ const KIT_INVENTORIES = {
   'Survival Kit':  ['Hooded Cloak', 'Rations (5 days)', 'Trap Tools', 'Hunting Knife'],
   'Noble Kit':     ['Fine Attire', 'Signet Ring', 'Coin Purse', 'Fine Wine']
 };
+
+const INVENTORY_CATEGORY_RULES = [
+  { tag: 'Weapon', icon: '⚔️', pattern: /(sword|bow|staff|knife|dagger)/i },
+  { tag: 'Armor', icon: '🛡️', pattern: /(armor|shield|cloak)/i },
+  { tag: 'Consumable', icon: '🧪', pattern: /(potion|rations|wine)/i },
+  { tag: 'Utility', icon: '🧰', pattern: /(rope|hook|torch|book|focus|reagents|tools|ring|purse|attire)/i },
+];
+
+const RUNTIME_STORAGE_KEYS = {
+  inventory: 'dnd_inventory',
+  roomEnv: 'dnd_room_env',
+  roomEncounters: 'dnd_room_encounters'
+};
+
+function getRuntimeStorage() {
+  try {
+    return window.sessionStorage;
+  } catch (e) {
+    return null;
+  }
+}
+
+function readStoredJson(key, fallback) {
+  const storage = getRuntimeStorage();
+  if (!storage) return fallback;
+  try {
+    const raw = storage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function writeStoredJson(key, value) {
+  const storage = getRuntimeStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+}
+
+function extractSnapshotInventory(snapshot) {
+  if (!Array.isArray(snapshot?.inventory)) return null;
+  return snapshot.inventory.map((item) => String(item).trim()).filter(Boolean);
+}
+
+function shouldResetPortableRoomState(roomMeta) {
+  return roomMeta?.source !== 'import';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   feed          = document.getElementById('message-feed');
@@ -120,13 +174,24 @@ document.addEventListener('DOMContentLoaded', () => {
   connectionStatus = document.getElementById('connection-status');
   userRoster    = document.getElementById('user-roster');
   loadingScreen = document.getElementById('loading-screen');
+  charSummary   = document.getElementById('char-summary');
+  chatInputRow  = document.getElementById('chat-input-row');
+  dmWhisperTarget = document.getElementById('dm-whisper-target');
+  dmWhisperInput  = document.getElementById('dm-whisper-input');
   snapshotSection = document.getElementById('snapshot-section');
   exportCampaignBtn = document.getElementById('export-campaign-btn');
   exportCharacterBtn = document.getElementById('export-character-btn');
   avatarBox = document.getElementById('avatar-box');
   roundDisplay = document.getElementById('round-display');
+  phaseDisplay = document.getElementById('phase-display');
   turnDisplay = document.getElementById('turn-display');
   nextRoundBtn = document.getElementById('next-round-btn');
+  actionSection = document.getElementById('action-section');
+  actionInput = document.getElementById('action-input');
+  actionStatus = document.getElementById('action-status');
+  actionCheckSummary = document.getElementById('action-check-summary');
+  actionSubmitBtn = document.getElementById('action-submit-btn');
+  actionRollBtn = document.getElementById('action-roll-btn');
   inventoryBox = document.getElementById('inventory-box');
   inventoryList = document.getElementById('inventory-list');
   tradeInventoryButtons = document.getElementById('trade-inventory-buttons');
@@ -143,14 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
   envEventDetail = document.getElementById('env-event-detail');
   envTarget = document.getElementById('env-target');
 
-  if (avatarSelect) {
-    avatarSelect.addEventListener('change', () => {
-      myAvatar = avatarSelect.value || myAvatar;
-      updateAvatarDisplay();
-    });
-  }
-
-  // Auto-derive avatar emoji when class changes on join form
+  // Derive avatar emoji when class changes on join form (pre-join only)
   if (charClassInput) {
     charClassInput.addEventListener('change', () => {
       myAvatar = CLASS_AVATAR_MAP[charClassInput.value] || '🧙';
@@ -165,8 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
     .filter(Boolean)
     .forEach((input) => input.addEventListener('input', updateSliderSummaries));
 
+  if (actionInput) {
+    actionInput.addEventListener('input', updateRoundActionUI);
+  }
+
   updateSliderSummaries();
   updateStatsSummary();
+  updateRoundActionUI();
 });
 // ─── UI Helpers ───────────────────────────────────────────────────────────────
 function addMessage(text, type = 'chat') {
@@ -187,22 +250,86 @@ function updateAvatarDisplay() {
     if (avatarDisplay) avatarDisplay.classList.add('hidden');
     return;
   }
-  const avatar = myAvatar || avatarSelect?.value || '🧙';
-  myAvatar = avatar;
+  const avatar = myAvatar || '🧙';
   if (!avatarDisplay) return;
-
   avatarDisplay.textContent = avatar;
   avatarDisplay.classList.remove('hidden');
 }
 
+function updateCharSummary() {
+  if (!charSummary) return;
+  if (isDM || !myCharacter) { charSummary.textContent = ''; return; }
+  const c = myCharacter;
+  charSummary.innerHTML =
+    `<div class="char-summary-head">` +
+      `<span class="char-summary-avatar">${c.avatar || '🧙'}</span>` +
+      `<div class="char-summary-title">` +
+        `<div class="char-summary-name">${escapeHtml(c.characterName)}</div>` +
+        `<div class="char-summary-sub">${escapeHtml(c.className)} · ${escapeHtml(c.race)} · Lv ${c.level}</div>` +
+      `</div>` +
+    `</div>` +
+    `<div class="char-summary-stats">HP ${c.hp}</div>`;
+}
+
+function formatActionStatValue(value) {
+  return String(Number(value) || 0);
+}
+
+function formatRoundResolutionMessage(result) {
+  const formula = result.total === null
+    ? 'no roll submitted'
+    : `${result.roll} + ${formatActionStatValue(result.statValue)} = ${result.total} vs ${result.threshold}`;
+  return `[Round ${result.roundNumber || currentRoundNumber} Resolution] ${result.actor}: ${result.success ? 'SUCCESS' : 'FAILURE'} on "${result.text}" (${formula}). ${result.resolutionText}`;
+}
+
+function updateRoundActionUI() {
+  const isPlayer = !isDM;
+  if (actionSection) actionSection.classList.toggle('hidden', !isPlayer);
+  if (diceSection) diceSection.classList.toggle('hidden', !isPlayer);
+  if (!isPlayer) return;
+
+  const actionPhase = currentRoundPhase === 'action';
+  const hasAssignedAction = Boolean(myPendingRoundAction);
+  const hasLockedRoll = Boolean(hasAssignedAction && myPendingRoundAction.roll !== null && myPendingRoundAction.roll !== undefined);
+
+  if (actionInput) {
+    actionInput.disabled = !actionPhase || hasAssignedAction;
+  }
+  if (actionSubmitBtn) {
+    actionSubmitBtn.disabled = !actionPhase || hasAssignedAction || !(actionInput?.value.trim());
+  }
+  if (actionRollBtn) {
+    actionRollBtn.disabled = !actionPhase || !hasAssignedAction || hasLockedRoll;
+  }
+  if (actionStatus) {
+    if (!actionPhase) {
+      actionStatus.textContent = currentRoundPhase === 'encounter'
+        ? 'An encounter is active. Resolve it before taking a new round action.'
+        : 'Waiting for the next round to open the action phase.';
+    } else if (!hasAssignedAction) {
+      actionStatus.textContent = 'Describe one action to attempt this round.';
+    } else if (!hasLockedRoll) {
+      actionStatus.textContent = `Locked action: ${myPendingRoundAction.text}`;
+    } else {
+      actionStatus.textContent = `Roll locked: ${myPendingRoundAction.roll}. Waiting for round resolution.`;
+    }
+  }
+  if (actionCheckSummary) {
+    if (!hasAssignedAction) {
+      actionCheckSummary.textContent = 'Submit an action to receive a stat check.';
+    } else {
+      actionCheckSummary.textContent = `Roll d20 + ${myPendingRoundAction.statLabel} (${formatActionStatValue(myPendingRoundAction.statValue)}) vs ${myPendingRoundAction.threshold}`;
+    }
+  }
+}
+
 // ─── Inventory Helpers ────────────────────────────────────────────────────────
 function initInventory(equipment) {
-  // Load saved inventory from localStorage, or start from kit
-  try {
-    const stored = localStorage.getItem('dnd_inventory');
-    if (stored) { myInventory = JSON.parse(stored); }
-    else { myInventory = [...(KIT_INVENTORIES[equipment] || ["Adventurer's Pack"])]; }
-  } catch(e) {
+  // Load saved inventory from tab-scoped runtime storage, or start from kit.
+  const stored = readStoredJson(RUNTIME_STORAGE_KEYS.inventory, null);
+  if (Array.isArray(stored)) {
+    myInventory = stored.map((item) => String(item).trim()).filter(Boolean);
+  } else {
     myInventory = [...(KIT_INVENTORIES[equipment] || ["Adventurer's Pack"])];
   }
   renderInventory();
@@ -217,9 +344,22 @@ function renderInventory() {
     return;
   }
   myInventory.forEach((item) => {
+    const meta = describeInventoryItem(item);
     const div = document.createElement('div');
     div.className = 'inv-item';
-    div.textContent = item;
+    const icon = document.createElement('span');
+    icon.className = 'inv-item-icon';
+    icon.textContent = meta.icon;
+
+    const name = document.createElement('span');
+    name.className = 'inv-item-name';
+    name.textContent = item;
+
+    const tag = document.createElement('span');
+    tag.className = 'inv-item-tag';
+    tag.textContent = meta.tag;
+
+    div.append(icon, name, tag);
     inventoryList.appendChild(div);
   });
 }
@@ -234,9 +374,10 @@ function renderTradeInventory() {
     return;
   }
   myInventory.forEach((item) => {
+    const meta = describeInventoryItem(item);
     const btn = document.createElement('button');
     btn.className = 'trade-item-btn';
-    btn.textContent = item;
+    btn.textContent = `${meta.icon} ${item}`;
     btn.onclick = () => {
       document.querySelectorAll('.trade-item-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
@@ -245,6 +386,14 @@ function renderTradeInventory() {
     };
     tradeInventoryButtons.appendChild(btn);
   });
+}
+
+function describeInventoryItem(item) {
+  const normalized = String(item || '').trim();
+  return INVENTORY_CATEGORY_RULES.find((rule) => rule.pattern.test(normalized)) || {
+    tag: 'Utility',
+    icon: '🧰'
+  };
 }
 
 function updateTradePlayerList(users) {
@@ -273,6 +422,30 @@ function updateSpawnPlayerList(users) {
     });
     sel.value = current || 'all';
   });
+}
+
+function updateDmWhisperList(users) {
+  if (!dmWhisperTarget) return;
+  const current = dmWhisperTarget.value;
+  dmWhisperTarget.innerHTML = '<option value="">— choose player —</option>';
+  users.filter(u => !u.isDM).forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.socketId;
+    opt.textContent = u.username;
+    dmWhisperTarget.appendChild(opt);
+  });
+  dmWhisperTarget.value = current;
+}
+
+function sendDmWhisper() {
+  if (!isDM) return;
+  const targetId = dmWhisperTarget?.value;
+  const text = dmWhisperInput?.value.trim();
+  if (!targetId) { displayError('Choose a player to whisper to.'); return; }
+  if (!text) { displayError('Whisper message cannot be empty.'); return; }
+  socket.emit('dm:whisper', { targetId, text });
+  addMessage(`🔒 [You → player] ${text}`, 'narrate');
+  if (dmWhisperInput) dmWhisperInput.value = '';
 }
 
 function getStatValues() {
@@ -398,14 +571,18 @@ function normalizeCharacter(rawCharacter = {}) {
 }
 
 function normalizeRoomSnapshot(rawRoom = {}) {
+  const portableState = rawRoom && typeof rawRoom.portableState === 'object'
+    ? rawRoom.portableState
+    : rawRoom;
+
   return {
     kind: 'room',
     roomType: closestOption(rawRoom.roomType, ROOM_TYPES, 'Village'),
     dmName: (rawRoom.dmName || 'Dungeon Master').toString().trim().slice(0, 40) || 'Dungeon Master',
     roomPassword: (rawRoom.roomPassword || 'adventure').toString().trim().slice(0, 40) || 'adventure',
     // Environment events and encounter outcomes carry forward; no chat or decisions
-    environment: Array.isArray(rawRoom.environment) ? rawRoom.environment.slice(0, 50) : [],
-    encounters: Array.isArray(rawRoom.encounters) ? rawRoom.encounters.slice(0, 100) : []
+    environment: Array.isArray(portableState.environment) ? portableState.environment.slice(0, 50) : [],
+    encounters: Array.isArray(portableState.encounters) ? portableState.encounters.slice(0, 100) : []
   };
 }
 
@@ -491,24 +668,7 @@ function requestCampaignExport() {
     displayError('Only the DM can export room snapshots.');
     return;
   }
-  // Fully client-side — no chat, no decisions, only portable room state
-  let environment = [];
-  let encounters = [];
-  try { environment = JSON.parse(localStorage.getItem('dnd_room_env') || '[]'); } catch(e) {}
-  try { encounters = JSON.parse(localStorage.getItem('dnd_room_encounters') || '[]'); } catch(e) {}
-
-  const snapshot = {
-    kind: 'room',
-    roomType: myRoomType || '',
-    dmName: myUsername || '',
-    roomPassword: myRoomPassword || '',
-    environment,   // [ { type, detail, at } ] — weather/terrain state only
-    encounters,    // [ { npcName, npcRole, outcome, at } ] — lifecycle records only
-    exportedAt: new Date().toISOString()
-  };
-  const roomCode = (myRoomId || 'room').toLowerCase();
-  downloadTxtFile(`${roomCode}-room.txt`, snapshot);
-  addMessage('Room snapshot exported.', 'system');
+  socket.emit('room:export:campaign');
 }
 
 function exportCharacterFromRoom() {
@@ -525,12 +685,10 @@ function exportCharacterFromRoom() {
   });
 
   const character = normalizeCharacter(source);
-  // Read latest inventory from localStorage
+  // Read latest inventory from tab-scoped runtime storage
   let inventory = [...myInventory];
-  try {
-    const stored = localStorage.getItem('dnd_inventory');
-    if (stored) inventory = JSON.parse(stored);
-  } catch(e) {}
+  const storedInventory = readStoredJson(RUNTIME_STORAGE_KEYS.inventory, null);
+  if (Array.isArray(storedInventory)) inventory = storedInventory;
 
   // Export: identity + stats + inventory only — no chat, no decisions, no backstory
   const payload = {
@@ -717,9 +875,9 @@ async function importRoomFromFile() {
     myUsername = dmName;
     myRoomType = roomType;
     myRoomPassword = roomPassword;
-    // Restore DM's portable room state to localStorage so it carries into the new room
-    try { localStorage.setItem('dnd_room_env', JSON.stringify(snapshot.environment || [])); } catch(e) {}
-    try { localStorage.setItem('dnd_room_encounters', JSON.stringify(snapshot.encounters || [])); } catch(e) {}
+    // Restore DM's portable room state into tab-scoped storage so imports stay isolated per tab.
+    writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, snapshot.environment || []);
+    writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, snapshot.encounters || []);
 
     socket.emit('room:start', {
       roomType,
@@ -753,10 +911,11 @@ async function importCharacterFromFile() {
   queueNormalizationReport('Character Import Normalization', buildCharacterNormalizationLines(payload, importedCharacter));
 
     applyCharacterToForm(importedCharacter);
-    // Restore inventory if the snapshot includes it
-    if (Array.isArray(snapshot.inventory) && snapshot.inventory.length > 0) {
-      myInventory = snapshot.inventory.map(i => String(i).trim()).filter(Boolean);
-      try { localStorage.setItem('dnd_inventory', JSON.stringify(myInventory)); } catch(e) {}
+    // Restore inventory if the snapshot includes it, even when it is intentionally empty.
+    const importedInventory = extractSnapshotInventory(snapshot);
+    if (importedInventory) {
+      myInventory = importedInventory;
+      writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
       renderInventory();
       renderTradeInventory();
     }
@@ -767,22 +926,44 @@ async function importCharacterFromFile() {
 }
 
 function joinRoomFromInputs() {
-  const roomId   = roomIdInput.value.trim();
-  const username = usernameInput.value.trim();
+  const roomId   = joinRoomIdInput?.value.trim() || '';
+  const password = joinRoomPasswordInput?.value || '';
+  const username = charNameInput?.value.trim() || '';
+
   if (!roomId || !username) {
-    displayError('Room and username are required.');
+    displayError('Room code and character name are required.');
     return;
   }
 
+  const rawCharacter = {
+    avatar: myAvatar,
+    characterName: username,
+    className: charClassInput?.value || 'Fighter',
+    race: charRaceInput?.value || 'Human',
+    level: Number(charLevelInput?.value || 1),
+    hp: Number(charHPInput?.value || 20),
+    backstory: charBackstoryInput?.value?.trim() || '',
+    equipment: charEquipmentInput?.value || 'Balanced Kit',
+    stats: getStatValues()
+  };
+  const character = importedCharacter || normalizeCharacter(rawCharacter);
+
   myRoomId   = roomId;
   myUsername = username;
-  isDM       = username.toLowerCase() === 'dm';
+  isDM       = false;
+  myCharacter = character;
 
-  socket.emit('room:join', { roomId, username });
+  socket.emit('room:join', { roomId, username, password, character });
+  if (loadingScreen) loadingScreen.classList.remove('hidden');
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 function sendMessageFromInput() {
+  if (isDM) {
+    displayError('DM regular chat is disabled. Use Narrate or Whisper.');
+    return;
+  }
+
   const text = messageInput.value.trim();
   if (!text) {
     displayError('Message cannot be empty.');
@@ -792,6 +973,16 @@ function sendMessageFromInput() {
   socket.emit('room:message', { text });
   messageInput.value = '';
 }
+
+function submitRoundAction() {
+  if (isDM) return;
+  const text = actionInput?.value.trim() || '';
+  if (!text) {
+    displayError('Describe what you want to attempt this round.');
+    return;
+  }
+  socket.emit('round:submit-action', { text });
+}
  
 // ─── DnD: Dice Roll ───────────────────────────────────────────────────────────
 function rollDice(die = 20) {
@@ -799,8 +990,11 @@ function rollDice(die = 20) {
     displayError('DM player-dice rolling is disabled.');
     return;
   }
-  const result = Math.floor(Math.random() * die) + 1;
-  socket.emit('game:roll', { result, die });
+  if (die !== 20) {
+    displayError('Round actions use a d20 check only.');
+    return;
+  }
+  socket.emit('round:submit-roll');
 }
 
 function advanceRound() {
@@ -996,20 +1190,25 @@ socket.on('room:joined', ({ roomId, socketId, roomMeta }) => {
   chatSection.classList.remove('hidden');
   if (isDM) {
     diceSection.classList.add('hidden');
+    if (actionSection) actionSection.classList.add('hidden');
     tradeSection.classList.add('hidden');
     if (avatarBox) avatarBox.classList.add('hidden');
+    if (chatInputRow) chatInputRow.classList.add('hidden');
     if (inventoryBox) inventoryBox.classList.add('hidden');
     if (nextRoundBtn) nextRoundBtn.classList.remove('hidden');
     if (dmSpawnSection) dmSpawnSection.classList.remove('hidden');
     if (dmEnvSection) dmEnvSection.classList.remove('hidden');
   } else {
     diceSection.classList.remove('hidden');
+    if (actionSection) actionSection.classList.remove('hidden');
     tradeSection.classList.remove('hidden');
     if (avatarBox) avatarBox.classList.remove('hidden');
+    if (chatInputRow) chatInputRow.classList.remove('hidden');
     if (inventoryBox) inventoryBox.classList.remove('hidden');
     if (nextRoundBtn) nextRoundBtn.classList.add('hidden');
     if (dmSpawnSection) dmSpawnSection.classList.add('hidden');
     if (dmEnvSection) dmEnvSection.classList.add('hidden');
+    initInventory(myCharacter?.equipment || 'Balanced Kit');
   }
   if (snapshotSection) snapshotSection.classList.remove('hidden');
   if (isDM) dmSection.classList.remove('hidden');
@@ -1020,10 +1219,10 @@ socket.on('room:joined', ({ roomId, socketId, roomMeta }) => {
   if (exportCharacterBtn) {
     exportCharacterBtn.classList.toggle('hidden', isDM);
   }
-  if (avatarSelect) {
-    avatarSelect.value = myAvatar || avatarSelect.value;
-  }
   updateAvatarDisplay();
+  updateCharSummary();
+  myPendingRoundAction = null;
+  updateRoundActionUI();
   addMessage(`You joined room "${roomId}" as ${myUsername}.`, 'system');
 
   if (pendingNormalizationLines.length > 0) {
@@ -1045,14 +1244,12 @@ socket.on('room:started', ({ roomId, roomType, dmName }) => {
   if (joinRoomIdInput) joinRoomIdInput.value = roomId;
   addMessage(`DM ${dmName} started room "${roomId}".`, 'system');
 
-  // Save room identity; if source was 'import' the env/encounter logs were already restored
-  // For fresh rooms, clear any stale logs from a previous session
+  // Imported rooms already restored portable state before room:start; fresh rooms should start clean.
   if (isDM) {
-    const wasImport = (myRoomId && myRoomId !== roomId); // heuristic: new roomId = fresh start
     myRoomId = roomId;
-    if (!wasImport) {
-      try { localStorage.setItem('dnd_room_env', '[]'); } catch(e) {}
-      try { localStorage.setItem('dnd_room_encounters', '[]'); } catch(e) {}
+    if (shouldResetPortableRoomState(roomMeta)) {
+      writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
+      writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
     }
   }
 });
@@ -1064,8 +1261,11 @@ socket.on('room:count', ({ count }) => {
 socket.on('room:history', (messages) => {
   if (!Array.isArray(messages) || messages.length === 0) return;
   addMessage('--- Recent room history ---', 'system');
-  messages.forEach(({ from, text }) => {
-    addMessage(`${from}: ${text}`);
+  messages.forEach(({ from, text, isDMSender }) => {
+    const label = isDMSender ? `[DM] ${from}` : from;
+    const isNarration = typeof text === 'string' && text.startsWith('[Narration] ');
+    const body = isNarration ? text.replace('[Narration] ', '') : text;
+    addMessage(`${label}: ${body}`, isNarration ? 'narrate' : 'chat');
   });
   addMessage('--- End room history ---', 'system');
 });
@@ -1093,8 +1293,122 @@ socket.on('user:left', ({ username }) => {
   addMessage(`${username} left the party.`, 'system');
 });
  
-socket.on('room:message', ({ from, text }) => {
-  addMessage(`${from}: ${text}`);
+socket.on('room:users', ({ users }) => {
+  updateUserRoster(users);
+  updateTradePlayerList(users);
+  updateDmWhisperList(users);
+  updateSpawnPlayerList(users);
+});
+
+socket.on('room:round', ({ roundNumber, turnUsername, phase }) => {
+  const numericRound = Number(roundNumber || 1);
+  const roundChanged = numericRound !== currentRoundNumber;
+  currentRoundNumber = numericRound;
+  currentRoundPhase = phase || 'action';
+
+  if (roundDisplay) roundDisplay.textContent = String(numericRound);
+  if (phaseDisplay) {
+    phaseDisplay.textContent = {
+      action: 'Action Phase',
+      resolution: 'Resolution Phase',
+      encounter: 'Encounter Phase',
+    }[currentRoundPhase] || 'Action Phase';
+  }
+  if (turnDisplay) turnDisplay.textContent = turnUsername || 'No active adventurer';
+
+  if (roundChanged) {
+    myPendingRoundAction = null;
+    if (actionInput) actionInput.value = '';
+  }
+  updateRoundActionUI();
+});
+
+socket.on('round:action:declared', ({ from, text }) => {
+  if (from === myUsername) return;
+  addMessage(`${from} commits: ${text}`, 'system');
+});
+
+socket.on('round:action:prompted', ({ from, text, statLabel, statValue, threshold }) => {
+  if (from === myUsername) return;
+  addMessage(`[Check] ${from}: roll d20 + ${statLabel} (${formatActionStatValue(statValue)}) vs ${threshold} for "${text}".`, 'system');
+});
+
+socket.on('round:action:assigned', ({ text, statKey, statLabel, statScore, statValue, threshold }) => {
+  myPendingRoundAction = {
+    text,
+    statKey,
+    statLabel,
+    statScore,
+    statValue,
+    threshold,
+    roll: null,
+  };
+  if (actionInput) actionInput.value = '';
+  updateRoundActionUI();
+  addMessage(`[Check] Roll d20 + ${statLabel} (${formatActionStatValue(statValue)}) vs ${threshold} for "${text}".`, 'system');
+});
+
+socket.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore, statValue, threshold, roll }) => {
+  myPendingRoundAction = {
+    text,
+    statKey,
+    statLabel,
+    statScore,
+    statValue,
+    threshold,
+    roll,
+  };
+  updateRoundActionUI();
+  addMessage(`[Roll Locked] d20 ${roll} locked for "${text}". Resolution happens when the DM advances the round.`, 'roll');
+});
+
+socket.on('round:action:roll-locked', ({ from, text, roll }) => {
+  if (from === myUsername) return;
+  addMessage(`${from} locks in a d20 roll of ${roll} for "${text}".`, 'roll');
+});
+
+socket.on('round:actions:resolved', ({ roundNumber, results }) => {
+  results.forEach((result) => {
+    addMessage(formatRoundResolutionMessage({ ...result, roundNumber }), result.success ? 'system' : 'error');
+  });
+  myPendingRoundAction = null;
+  updateRoundActionUI();
+});
+
+socket.on('room:message', ({ from, text, isDMSender }) => {
+  const label = isDMSender ? `[DM] ${from}` : from;
+  addMessage(`${label}: ${text}`);
+});
+
+socket.on('dm:whisper', ({ from, text }) => {
+  addMessage(`🔒 [DM → you] ${escapeHtml ? escapeHtml(text) : text}`, 'narrate');
+});
+
+socket.on('room:export:campaign', ({ campaign }) => {
+  if (!campaign || typeof campaign !== 'object') {
+    displayError('Invalid campaign export payload.');
+    return;
+  }
+
+  const portableState = campaign.portableState && typeof campaign.portableState === 'object'
+    ? {
+        environment: Array.isArray(campaign.portableState.environment) ? campaign.portableState.environment : [],
+        encounters: Array.isArray(campaign.portableState.encounters) ? campaign.portableState.encounters : [],
+      }
+    : {
+        environment: readStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []),
+        encounters: readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []),
+      };
+
+  const snapshot = {
+    ...campaign,
+    portableState,
+    exportedAt: new Date().toISOString()
+  };
+
+  const roomCode = (campaign.roomId || myRoomId || 'room').toLowerCase();
+  downloadTxtFile(`${roomCode}-room.txt`, snapshot);
+  addMessage('Room snapshot exported.', 'system');
 });
  
 // ─── DnD Game Events ──────────────────────────────────────────────────────────
@@ -1111,7 +1425,7 @@ socket.on('game:narrate', ({ from, text }) => {
 
 socket.on('trade:received', ({ fromUsername, item }) => {
   myInventory.push(item);
-  try { localStorage.setItem('dnd_inventory', JSON.stringify(myInventory)); } catch(e) {}
+  writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
   renderInventory();
   renderTradeInventory();
   addMessage(`💼 ${fromUsername} traded you: ${item}`, 'trade');
@@ -1120,7 +1434,7 @@ socket.on('trade:received', ({ fromUsername, item }) => {
 socket.on('trade:sent', ({ toUsername, item }) => {
   let removed = false;
   myInventory = myInventory.filter(i => { if (!removed && i === item) { removed = true; return false; } return true; });
-  try { localStorage.setItem('dnd_inventory', JSON.stringify(myInventory)); } catch(e) {}
+  writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
   renderInventory();
   renderTradeInventory();
   addMessage(`💼 You sent ${item || 'an item'} to ${toUsername}.`, 'system');
@@ -1178,12 +1492,24 @@ socket.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketIds
   msgBox.parentElement.insertBefore(panel, msgBox);
 });
 
-socket.on('encounter:roster', ({ eid, roster }) => {
+socket.on('encounter:roster', ({ eid, roster, ready }) => {
   const el = document.getElementById('dm-encounter-roster');
   if (!el) return;
-  el.innerHTML = roster.map(p =>
-    `<div class="roster-row"><span>${escapeHtml(p.username)}</span><span>${p.decision ? escapeHtml(p.decision.optionLabel) : '—'}</span><span>${p.roll !== null ? `d20: ${p.roll} (${escapeHtml(p.outcome)})` : 'no roll'}</span></div>`
-  ).join('');
+  const summary = ready
+    ? '<div class="roster-row"><strong>Encounter ready. Advance the round to resolve it.</strong></div>'
+    : '';
+  el.innerHTML = summary + roster.map((p) => {
+    let rollText = 'awaiting choice';
+    if (p.decision && p.check && p.check.requiresRoll && p.roll === null) {
+      rollText = `awaiting d20 vs ${p.check.threshold}`;
+    } else if (p.decision && p.check && p.check.requiresRoll) {
+      rollText = `d20 ${p.roll} + ${p.check.statValue} = ${p.total} (${p.success ? 'success' : 'failure'})`;
+    } else if (p.decision) {
+      rollText = p.decision.resolutionText || 'no roll required';
+    }
+
+    return `<div class="roster-row"><span>${escapeHtml(p.username)}</span><span>${p.decision ? escapeHtml(p.decision.optionLabel) : '—'}</span><span>${rollText}</span></div>`;
+  }).join('');
 });
 
 function dmForceResolve(eid, outcome) {
@@ -1217,7 +1543,7 @@ socket.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNam
   options.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'encounter-btn';
-    btn.textContent = opt.label + (opt.roll ? ` (roll: ${opt.roll})` : '');
+    btn.textContent = opt.label + (opt.reqRoll ? ' (check required)' : ' (no roll)');
     btn.addEventListener('click', () => submitEncounterDecision(eid, opt.id, opt.label));
     actionsDiv.appendChild(btn);
   });
@@ -1231,17 +1557,27 @@ socket.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNam
 function submitEncounterDecision(eid, optionId, optionLabel) {
   if (activeEncounterEid !== eid) return;
   socket.emit('encounter:decide', { eid, optionId, optionLabel });
-  // Show roll section
-  const rollSection = document.getElementById(`enc-roll-${eid}`);
-  if (rollSection) rollSection.style.display = 'block';
   // Disable decision buttons
   const card = document.getElementById(`encounter-card-${eid}`);
   if (card) card.querySelectorAll('.encounter-btn').forEach(b => b.disabled = true);
 }
 
-socket.on('encounter:decision:ack', ({ eid }) => {
+socket.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, resolutionText }) => {
   const res = document.getElementById(`enc-result-${eid}`);
-  if (res) res.textContent = '✓ Decision submitted. Now roll!';
+  const rollSection = document.getElementById(`enc-roll-${eid}`);
+  const rollButton = rollSection ? rollSection.querySelector('button') : null;
+  if (needsRoll) {
+    if (rollSection) rollSection.style.display = 'block';
+    if (rollButton) rollButton.disabled = false;
+    if (res) {
+      res.textContent = `Choice locked: ${optionLabel}. Roll d20 + ${check.statLabel} (${formatActionStatValue(check.statValue)}) vs ${check.threshold}.`;
+    }
+  } else {
+    if (rollSection) rollSection.style.display = 'none';
+    if (res) {
+      res.textContent = `Choice locked: ${optionLabel}. ${resolutionText || 'No roll required.'} Resolution happens when the DM advances the round.`;
+    }
+  }
 });
 
 function submitEncounterRoll(eid) {
@@ -1250,11 +1586,22 @@ function submitEncounterRoll(eid) {
   socket.emit('encounter:roll', { eid, roll });
 }
 
-socket.on('encounter:roll:ack', ({ eid, roll, outcome }) => {
+socket.on('encounter:roll:ack', ({ eid, roll, statLabel, statValue, threshold, total, success }) => {
   const res = document.getElementById(`enc-result-${eid}`);
-  if (res) res.textContent = `You rolled ${roll} — ${outcome === 'hit' ? '✅ Hit!' : '❌ Miss'}`;
+  if (res) {
+    res.textContent = `Roll locked: ${roll} + ${formatActionStatValue(statValue)} = ${total} vs ${threshold} (${success ? 'success' : 'failure'}). Resolution happens when the DM advances the round.`;
+  }
   const rollSection = document.getElementById(`enc-roll-${eid}`);
   if (rollSection) rollSection.querySelector('button').disabled = true;
+});
+
+socket.on('encounter:ready', ({ eid, npcName }) => {
+  const res = document.getElementById(`enc-result-${eid}`);
+  if (res) {
+    const baseText = res.textContent ? `${res.textContent} ` : '';
+    res.textContent = `${baseText}Encounter ready. Waiting for the DM to advance the round.`.trim();
+  }
+  addMessage(`[Encounter Ready] ${npcName} will resolve when the DM advances the round.`, 'system');
 });
 
 // ─── Encounter: Resolution ─────────────────────────────────────────────────────
@@ -1265,14 +1612,11 @@ socket.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot, 
 
   activeEncounterEid = null;
 
-  // DM saves encounter lifecycle record to localStorage (outcome only — no decisions/rolls)
+  // DM saves encounter lifecycle records in tab-scoped runtime storage.
   if (isDM) {
-    try {
-      const enc = JSON.parse(localStorage.getItem('dnd_room_encounters') || '[]');
-      // Find NPC name from the roster if available
-      enc.push({ eid, outcome, at: at || new Date().toISOString() });
-      localStorage.setItem('dnd_room_encounters', JSON.stringify(enc));
-    } catch(e) {}
+    const enc = readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
+    enc.push({ eid, outcome, at: at || new Date().toISOString() });
+    writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, enc);
   }
 
   // Replace the prompt card with result
@@ -1309,9 +1653,9 @@ socket.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot, 
   addMessage(`${outcomeEmoji} Encounter ended: ${outcome}. ${flavor}`, 'narrate');
 });
 
-// ─── localStorage persistence helpers ────────────────────────────────────────
+// ─── Runtime storage helpers ────────────────────────────────────────────────
 function saveInventoryToStorage() {
-  try { localStorage.setItem('dnd_inventory', JSON.stringify(myInventory)); } catch(e) {}
+  writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
 }
 
 socket.on('dm:env:result', ({ ok, message, eventType, limits }) => {
@@ -1328,13 +1672,11 @@ socket.on('dm:spawn:event', ({ npcType, npcName, dmName }) => {
 socket.on('dm:env:event', ({ eventType, detail, dmName }) => {
   const typeLabel = { weather: '🌩️ Weather Change', terrain: '🗺️ Terrain Change', event: '⚡ Environmental Event', loot: '💰 Loot Drop' }[eventType] || eventType;
   addMessage(`${typeLabel}${detail ? ': ' + detail : ''}`, 'narrate');
-  // DM saves environment events to localStorage for room export (weather/terrain are portable state)
+  // DM saves environment events in tab-scoped storage for room export.
   if (isDM && (eventType === 'weather' || eventType === 'terrain')) {
-    try {
-      const env = JSON.parse(localStorage.getItem('dnd_room_env') || '[]');
-      env.push({ type: eventType, detail: detail || '', at: new Date().toISOString() });
-      localStorage.setItem('dnd_room_env', JSON.stringify(env));
-    } catch(e) {}
+    const env = readStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
+    env.push({ type: eventType, detail: detail || '', at: new Date().toISOString() });
+    writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, env);
   }
 });
 
@@ -1390,6 +1732,7 @@ socket.on('webrtc:ice-candidate', async ({ fromId, candidate }) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     if (document.activeElement === messageInput) sendMessageFromInput();
+    if (document.activeElement === actionInput) submitRoundAction();
     if (document.activeElement === narrateInput)  sendNarration();
   }
 });
