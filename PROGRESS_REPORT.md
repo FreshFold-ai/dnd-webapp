@@ -93,7 +93,7 @@ Urvish: Deployment, inventory/trade, environment system, WebRTC.
 
 ### Who is in our group?
 
-Kobe, Devon, Urvish, Brandon.
+Kobe, Devin, Urvish, Brandon.
 
 ### What is our project?
 
@@ -108,7 +108,7 @@ An Express server that serves static files and runs Socket.IO on localhost:3000.
 
 Our project has 116 lines of actual code across 4 JavaScript files. The rest of the 463 total lines are comments, blanks, HTML, and CSS. We have 0 test files so far.
 
-When we run it locally and open two browser tabs, we can type a username and room name, send messages between tabs, and see a member count update. That is the full extent of our current functionality.
+When we run it locally and open two browser tabs, we can type a username and room name, send messages and files between tabs, and see a member count update. Added a dice roll function up to a D20. That is the full extent of our current functionality.
 
 ### What needs to be done
 
@@ -128,7 +128,7 @@ We have grouped our remaining tasks by priority and assigned them to team member
 7. Add server logging for requests, events, and errors.
 8. Add error handling on both server and client.
 
-#### User system and UI. Assigned to Devon.
+#### User system and UI. Assigned to Devin.
 
 9. Build user registration and login.
 10. Build a user roster sidebar that shows who is in the room.

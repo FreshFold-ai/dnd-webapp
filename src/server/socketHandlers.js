@@ -162,101 +162,8 @@ function registerSocketHandlers(io) {
       console.error(`[SOCKET ERROR] ${socket.id}`, err);
     });
 
-    socket.on("room:start", ({ roomType, dmName, roomPassword, source }) => {
-      if (!roomType || !dmName || !roomPassword) {
-        socket.emit("server:error", { message: "Room type, DM name, and room password are required" });
-        return;
-      }
-
-      const normalizedRoomType = closestOption(roomType, ROOM_TYPES, "Village");
-      const normalizedDM = String(dmName || "Dungeon Master").trim().slice(0, 40) || "Dungeon Master";
-      const normalizedPassword = String(roomPassword || "adventure").trim().slice(0, 40) || "adventure";
-
-      const roomId = uniqueRoomSlug();
-      roomMeta[roomId] = {
-        roomType: normalizedRoomType,
-        dmName: normalizedDM,
-        roomPassword: normalizedPassword,
-        createdAt: new Date().toISOString(),
-        source: source || "manual"
-      };
-
-      socket.data.roomId = roomId;
-      socket.data.username = normalizedDM;
-      socket.data.isDM = true;
-      socket.data.character = {
-        avatar: "🎲",
-        className: "Dungeon Master",
-        race: normalizedRoomType,
-        level: 0
-      };
-      socket.join(roomId);
-
-      if (!roomUsers[roomId]) roomUsers[roomId] = {};
-      roomUsers[roomId][socket.id] = {
-        socketId: socket.id,
-        username: normalizedDM,
-        avatar: "🎲",
-        className: "Dungeon Master",
-        race: normalizedRoomType,
-        level: 0,
-        isDM: true,
-        actionSelected: false,
-        hasRolled: false,
-        joinedAt: Date.now()
-      };
-
-      roomRounds[roomId] = {
-        roundNumber: 1,
-        turnIndex: 0,
-        turnOrderIds: []
-      };
-      roomSpawnLimits[roomId] = { spawnType: null, aggroCount: 0, greyCount: 0, utilityCount: 0 };
-      roomEnvLimits[roomId]   = { weatherChanged: false, lootDropTotal: 0, lootDropsByUser: {} };
-      roomEncounters[roomId]  = null;
-
-      socket.emit("room:started", {
-        roomId,
-        roomType: normalizedRoomType,
-        dmName: normalizedDM
-      });
-
-      socket.emit("room:joined", {
-        roomId,
-        socketId: socket.id,
-        roomMeta: {
-          roomType: normalizedRoomType,
-          dmName: normalizedDM,
-          createdAt: roomMeta[roomId].createdAt
-        }
-      });
-      // No server-side message history — client localStorage is the durable store.
-
-      emitRoomCount(io, roomId);
-      emitRoomUsers(io, roomId);
-      emitRoundState(io, roomId);
-      console.log(`[ROOM START] ${normalizedDM} started ${roomId} (${normalizedRoomType})`);
-    });
-
-    socket.on("room:join", ({ roomId, username, roomPassword, character }) => {
-      if (!roomId || !username || !roomPassword) {
-        socket.emit("server:error", { message: "Room code, name, and password are required" });
-        return;
-      }
-
-      const room = roomMeta[roomId];
-      if (!room) {
-        socket.emit("server:error", { message: "Room does not exist" });
-        return;
-      }
-
-      if (room.roomPassword !== roomPassword) {
-        socket.emit("server:error", { message: "Incorrect room password" });
-        return;
-      }
-
-      const normalizedName = String(username || "Adventurer").trim().slice(0, 40) || "Adventurer";
-      const normalizedCharacter = normalizeCharacter(character || { characterName: normalizedName });
+    socket.on("room:join", ({ roomId, username }) => {
+      if (!roomId || !username) return;
 
       socket.data.roomId = roomId;
       socket.data.username = normalizedName;
@@ -264,17 +171,10 @@ function registerSocketHandlers(io) {
       socket.data.character = normalizedCharacter;
 
       socket.join(roomId);
-      socket.emit("room:joined", {
-        roomId,
-        socketId: socket.id,
-        roomMeta: {
-          roomType: room.roomType,
-          dmName: room.dmName,
-          createdAt: room.createdAt
-        }
-      });
-      // No server history — client's localStorage holds their log.
-      console.log(`[JOIN] ${normalizedName} joined ${roomId}`);
+      // Notify the joining socket that it successfully joined
+      socket.emit("room:joined", { roomId, socketId: socket.id });
+      socket.emit("room:history", roomMessages[roomId] || []);
+      console.log(`[JOIN] ${username} joined ${roomId}`);
 
       if (!roomUsers[roomId]) {
         roomUsers[roomId] = {};

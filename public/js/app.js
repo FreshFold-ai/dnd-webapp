@@ -668,6 +668,10 @@ function updateUserRoster(users) {
     userRoster.appendChild(userDiv);
   });
 }
+
+function displayError(message) {
+  addMessage(`Error: ${message}`, 'error');
+}
  
 // ─── Start / Join ─────────────────────────────────────────────────────────────
 function startRoomFromInputs() {
@@ -763,51 +767,18 @@ async function importCharacterFromFile() {
 }
 
 function joinRoomFromInputs() {
-  const roomId = joinRoomIdInput?.value.trim() || '';
-  const roomPassword = joinRoomPasswordInput?.value || '';
-  if (!roomId || !roomPassword) {
-    displayError('Room code and room password are required.');
+  const roomId   = roomIdInput.value.trim();
+  const username = usernameInput.value.trim();
+  if (!roomId || !username) {
+    displayError('Room and username are required.');
     return;
   }
 
-  const characterResult = collectCharacterFromInputs();
-  if (!characterResult.valid) {
-    displayError(characterResult.message);
-    return;
-  }
-
-  const character = characterResult.character;
- 
   myRoomId   = roomId;
-  myRoomPassword = roomPassword;
-  myUsername = character.characterName;
-  myAvatar   = character.avatar;
-  myCharacter = character;
-  isDM = false;
-  initInventory(character.equipment);
- 
-  updateAvatarDisplay();
-  socket.emit('room:join', {
-    roomId,
-    roomPassword,
-    username: character.characterName,
-    character
-  });
-  if (loadingScreen) loadingScreen.classList.remove('hidden');
-}
+  myUsername = username;
+  isDM       = username.toLowerCase() === 'dm';
 
-// ─── Go Back to Join Screen ──────────────────────────────────────────────────
-// TODO: implement back-navigation (socket leave event, state reset, confirm dialog)
-function goBackToJoin() {
-  chatSection.classList.add('hidden');
-  joinSection.classList.remove('hidden');
-  diceSection.classList.add('hidden');
-  tradeSection.classList.add('hidden');
-  if (snapshotSection) snapshotSection.classList.add('hidden');
-  if (nextRoundBtn) nextRoundBtn.classList.add('hidden');
-  if (avatarBox) avatarBox.classList.remove('hidden');
-  dmSection.classList.add('hidden');
-  // Optionally emit leave room or reset state
+  socket.emit('room:join', { roomId, username });
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -817,6 +788,7 @@ function sendMessageFromInput() {
     displayError('Message cannot be empty.');
     return;
   }
+
   socket.emit('room:message', { text });
   messageInput.value = '';
 }
@@ -1089,17 +1061,6 @@ socket.on('room:count', ({ count }) => {
   memberCount.textContent = count;
 });
 
-socket.on('room:round', ({ roundNumber, turnUsername }) => {
-  if (roundDisplay) roundDisplay.textContent = String(roundNumber || 1);
-  if (turnDisplay) turnDisplay.textContent = turnUsername || 'No active adventurer';
-});
-
-socket.on('room:users', ({ users }) => {
-  updateUserRoster(users);
-  updateTradePlayerList(users);
-  updateSpawnPlayerList(users);
-});
- 
 socket.on('room:history', (messages) => {
   if (!Array.isArray(messages) || messages.length === 0) return;
   addMessage('--- Recent room history ---', 'system');
@@ -1116,32 +1077,10 @@ socket.on('server:error', ({ message }) => {
 socket.on('connect_error', (error) => {
   displayError(`Connection failed: ${error && error.message ? error.message : error}`);
   console.error('[CONNECT ERROR]', error);
-  updateConnectionStatus('disconnected');
 });
 
 socket.on('disconnect', (reason) => {
   addMessage(`Disconnected from server: ${reason}`, 'error');
-  updateConnectionStatus('disconnected');
-});
-
-socket.on('connect', () => {
-  updateConnectionStatus('connected');
-  addMessage('Connected to server.', 'system');
-});
-
-socket.on('reconnect', () => {
-  updateConnectionStatus('connected');
-  addMessage('Reconnected to server.', 'system');
-});
-
-socket.on('reconnect_attempt', () => {
-  updateConnectionStatus('reconnecting');
-  addMessage('Attempting to reconnect to server…', 'system');
-});
-
-socket.on('reconnect_error', (error) => {
-  updateConnectionStatus('disconnected');
-  console.error('[RECONNECT ERROR]', error);
 });
 
 socket.on('user:joined', ({ socketId, username }) => {
