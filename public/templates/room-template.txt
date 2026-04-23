@@ -1,0 +1,7 @@
+{
+  "kind": "room",
+  "roomType": "Moonlit Grove",
+  "dmName": "Meris",
+  "roomPassword": "oak",
+  "notes": "Optional room notes for setup, lore, or objectives."
+}

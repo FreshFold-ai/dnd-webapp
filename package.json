@@ -20,12 +20,10 @@
     "express": "^4.19.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.3"
-    ,
+  },
+  "devDependencies": {
+    "pkg": "^5.8.0",
     "localtunnel": "^2.0.2",
     "ngrok": "^4.3.0"
-  }
-  ,
-  "devDependencies": {
-    "pkg": "^5.8.0"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "kind": "character",
+  "character": {
+    "avatar": "🧙",
+    "characterName": "Ari",
+    "className": "Spellblade",
+    "race": "Human",
+    "level": 3,
+    "hp": 28,
+    "backstory": "A former scout searching for a lost relic.",
+    "equipment": "Short blade, spellbook, rope, rations",
+    "stats": {
+      "might": 7,
+      "agility": 8,
+      "endurance": 7,
+      "intellect": 8,
+      "intuition": 7,
+      "presence": 7
+    }
+  }
+}

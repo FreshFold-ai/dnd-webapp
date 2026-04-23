@@ -10,28 +10,187 @@
 
   <!-- ── Join Screen ───────────────────────────────────────── -->
   <div id="join-section">
-    <div class="join-card">
-      <h1 class="join-title">⚔️ Enter the Tavern</h1>
-      <p class="join-sub">Type <strong>DM</strong> as your name to become the Dungeon Master.</p>
-      <input id="room-id"   type="text" placeholder="Room name (e.g. dungeon-1)" />
-      <input id="username"  type="text" placeholder="Your adventurer name" />
-      <button onclick="joinRoomFromInputs()">Join Quest</button>
+    <div class="join-left">
+      <h1 class="join-game-title game-text">Digital Roleplaying Game</h1>
+    </div>
+    <div class="join-right">
+      <div class="join-card join-card--wide">
+        <h1 class="join-title">⚔️ Adventure Awaits</h1>
+        <p class="join-sub">Start a new campaign as a Dungeon Master, or join an existing room as a player.</p>
+
+        <div class="lobby-grid">
+          <section class="lobby-panel">
+            <h2 class="panel-title">Start</h2>
+            <p class="panel-sub">Create a new room or import a previous one.</p>
+
+            <div class="panel-block">
+              <h3>New Room</h3>
+              <select id="start-room-type">
+                <option value="Village">Village</option>
+                <option value="Township">Township</option>
+                <option value="City">City</option>
+                <option value="Ruins">Ruins</option>
+                <option value="Castle">Castle</option>
+                <option value="Manor">Manor</option>
+                <option value="Desert">Desert</option>
+                <option value="Oasis">Oasis</option>
+                <option value="Forest">Forest</option>
+                <option value="Mountains">Mountains</option>
+                <option value="Moonlit Grove">Moonlit Grove</option>
+                <option value="Hollow Fen">Hollow Fen</option>
+                <option value="Sunken Temple">Sunken Temple</option>
+                <option value="Crystal Caverns">Crystal Caverns</option>
+                <option value="Ashen Wastes">Ashen Wastes</option>
+                <option value="Skyreach Spire">Skyreach Spire</option>
+                <option value="Whispering Catacombs">Whispering Catacombs</option>
+                <option value="Storm Coast">Storm Coast</option>
+              </select>
+              <input id="start-dm-name" type="text" placeholder="DM name" />
+              <input id="start-room-password" type="password" placeholder="Room password" />
+              <button onclick="startRoomFromInputs()">Start New Room</button>
+              <p id="created-room-code" class="created-room-code hidden"></p>
+              <button id="copy-room-code-btn" class="hidden" onclick="copyRoomCode()">Copy Room Code</button>
+            </div>
+
+            <div class="panel-block">
+              <h3>Import Existing Room</h3>
+              <a class="template-link" href="/templates/room-template.txt" download>Download Room Template (.txt)</a>
+              <input id="room-import-file" type="file" accept=".txt" />
+              <button onclick="importRoomFromFile()">Import Room .txt</button>
+            </div>
+          </section>
+
+          <section class="lobby-panel">
+            <h2 class="panel-title">Join</h2>
+            <p class="panel-sub">Join by room code, then create or import your character.</p>
+
+            <div class="panel-block">
+              <h3>Room Access</h3>
+              <input id="join-room-id" type="text" placeholder="Room code (e.g. ember-marsh-4821)" />
+              <input id="join-room-password" type="password" placeholder="Room password" />
+            </div>
+
+            <div class="panel-block">
+              <h3>Create Character</h3>
+              <input id="char-name" type="text" placeholder="Character name" />
+              <select id="char-class">
+                <option value="Fighter">Fighter</option>
+                <option value="Rogue">Rogue</option>
+                <option value="Wizard">Wizard</option>
+                <option value="Cleric">Cleric</option>
+                <option value="Ranger">Ranger</option>
+                <option value="Paladin">Paladin</option>
+                <option value="Warlock">Warlock</option>
+                <option value="Bard">Bard</option>
+                <option value="Druid">Druid</option>
+                <option value="Monk">Monk</option>
+              </select>
+              <select id="char-race">
+                <option value="Human">Human</option>
+                <option value="Elf">Elf</option>
+                <option value="Dwarf">Dwarf</option>
+                <option value="Halfling">Halfling</option>
+                <option value="Orc">Orc</option>
+                <option value="Tiefling">Tiefling</option>
+                <option value="Dragonborn">Dragonborn</option>
+                <option value="Gnome">Gnome</option>
+                <option value="Half-Elf">Half-Elf</option>
+                <option value="Half-Orc">Half-Orc</option>
+              </select>
+              <div class="field-row">
+                <div class="slider-group">
+                  <label for="char-level">Level <span id="char-level-value">1</span></label>
+                  <input id="char-level" type="range" min="1" max="20" step="1" value="1" />
+                </div>
+                <div class="slider-group">
+                  <label for="char-hp">HP <span id="char-hp-value">20</span></label>
+                  <input id="char-hp" type="range" min="8" max="120" step="1" value="20" />
+                </div>
+              </div>
+              <textarea id="char-backstory" rows="3" placeholder="Backstory"></textarea>
+              <select id="char-equipment">
+                <option value="Balanced Kit">Balanced Kit (melee, ranged, utility)</option>
+                <option value="Frontline Kit">Frontline Kit (heavy armor, shield, potion)</option>
+                <option value="Scout Kit">Scout Kit (light armor, bow, rope)</option>
+                <option value="Caster Kit">Caster Kit (focus, spellbook, reagents)</option>
+                <option value="Survival Kit">Survival Kit (cloak, rations, trap tools)</option>
+                <option value="Noble Kit">Noble Kit (fine attire, signet, coin purse)</option>
+              </select>
+
+              <div class="stats-grid">
+                <div class="stat-control">
+                  <label for="stat-might">Might <span id="stat-might-value">7</span></label>
+                  <input id="stat-might" type="range" min="3" max="20" step="1" value="7" />
+                </div>
+                <div class="stat-control">
+                  <label for="stat-agility">Agility <span id="stat-agility-value">8</span></label>
+                  <input id="stat-agility" type="range" min="3" max="20" step="1" value="8" />
+                </div>
+                <div class="stat-control">
+                  <label for="stat-endurance">Endurance <span id="stat-endurance-value">7</span></label>
+                  <input id="stat-endurance" type="range" min="3" max="20" step="1" value="7" />
+                </div>
+                <div class="stat-control">
+                  <label for="stat-intellect">Intellect <span id="stat-intellect-value">8</span></label>
+                  <input id="stat-intellect" type="range" min="3" max="20" step="1" value="8" />
+                </div>
+                <div class="stat-control">
+                  <label for="stat-intuition">Intuition <span id="stat-intuition-value">7</span></label>
+                  <input id="stat-intuition" type="range" min="3" max="20" step="1" value="7" />
+                </div>
+                <div class="stat-control">
+                  <label for="stat-presence">Presence <span id="stat-presence-value">7</span></label>
+                  <input id="stat-presence" type="range" min="3" max="20" step="1" value="7" />
+                </div>
+              </div>
+              <p id="stats-summary" class="stats-summary">Stat points used: 0 / 44</p>
+              <button onclick="joinRoomFromInputs()">Join Room</button>
+            </div>
+
+            <div class="panel-block">
+              <h3>Import Character</h3>
+              <a class="template-link" href="/templates/character-template.txt" download>Download Character Template (.txt)</a>
+              <input id="character-import-file" type="file" accept=".txt" />
+              <button onclick="importCharacterFromFile()">Import Character .txt</button>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- ── Chat / Game Screen ────────────────────────────────── -->
   <div id="chat-section" class="hidden">
 
+    <!-- Back Button -->
+    <button id="back-button" class="back-button" onclick="goBackToJoin()">← Back</button>
+
+    <!-- Connection Status Indicator -->
+    <div id="connection-status" class="connection-status connection-status--connected" title="Connected to server">
+      <div class="connection-dot"></div>
+      <span class="connection-text">Connected</span>
+    </div>
+
     <aside class="sidebar">
       <div class="room-info">
         <span class="room-label">Room</span>
         <span id="room-display"></span>
       </div>
+      <div class="round-box">
+        <span class="member-label">Round</span>
+        <span id="round-display" class="round-value">1</span>
+        <span id="turn-display" class="turn-value">No active adventurer</span>
+        <button id="next-round-btn" class="hidden" onclick="advanceRound()">Next Round</button>
+      </div>
       <div class="member-box">
         <span class="member-label">Adventurers</span>
         <span id="member-count" class="member-count">0</span>
       </div>
-      <div class="avatar-box">
+      <div class="user-roster">
+        <span class="member-label">Party Roster</span>
+        <div id="user-roster" class="user-list"></div>
+      </div>
+      <div id="avatar-box" class="avatar-box">
         <span class="member-label">Your avatar</span>
         <select id="avatar-select">
           <option value="🧙">🧙 Wizard</option>
@@ -42,12 +201,20 @@
           <option value="🌿">🌿 Druid</option>
         </select>
       </div>
+
+      <!-- Inventory (players only) -->
+      <div id="inventory-box" class="inventory-box hidden">
+        <span class="member-label">Inventory</span>
+        <div id="inventory-list" class="inventory-list"></div>
+      </div>
     </aside>
 
     <main class="main">
 
       <!-- Message feed -->
-      <div id="message-feed" class="message-feed"></div>
+      <div id="message-feed" class="message-feed">
+        <div id="avatar-display" class="avatar-display hidden"></div>
+      </div>
 
       <!-- Chat input -->
       <div class="input-row">
@@ -68,43 +235,149 @@
 
       <!-- DM-only narration (hidden for regular players) -->
       <div id="dm-section" class="panel hidden">
-        <span class="panel-label">DM Narration</span>
+        <span class="panel-label">Set Scene</span>
         <input id="narrate-input" type="text" placeholder="Describe what happens next…"/>
         <button onclick="sendNarration()">Narrate</button>
       </div>
 
-      <!-- P2P file trade -->
+      <!-- P2P item trade -->
       <div id="trade-section" class="panel hidden">
-        <span class="panel-label">Trade item (P2P)</span>
-        <input id="trade-target" type="text" placeholder="Target socket ID (first 6 chars)"/>
-        <input id="trade-file"   type="file"/>
+        <span class="panel-label">Trade Item</span>
+        <select id="trade-target-select">
+          <option value="">— choose player —</option>
+        </select>
+        <div id="trade-inventory-buttons" class="trade-inv-list">
+          <em class="trade-inv-empty">No items in inventory</em>
+        </div>
+        <p id="trade-selected-item" class="trade-selected-label"></p>
         <button onclick="triggerTrade()">Send Item</button>
+      </div>
+
+      <!-- DM Spawn Controls -->
+      <div id="dm-spawn-section" class="panel hidden">
+        <span class="panel-label">Spawn NPC <span id="spawn-limit-info" class="limit-badge"></span></span>
+        <div class="panel-row">
+          <select id="spawn-npc-type">
+            <option value="utility">Utility NPC (merchant/trader)</option>
+            <option value="grey">Grey NPC (dialogue-heavy)</option>
+            <option value="aggro">AGGRO NPC (hostile)</option>
+          </select>
+          <select id="spawn-npc-template">
+            <option value="">— Pick specific template (optional) —</option>
+            <optgroup label="Aggro">
+              <option value="goblin_scout">Goblin Scout</option>
+              <option value="orc_raider">Orc Raider</option>
+              <option value="bandit_thug">Bandit Thug</option>
+              <option value="skeleton_warrior">Skeleton Warrior</option>
+              <option value="dark_wolf">Dark Wolf</option>
+            </optgroup>
+            <optgroup label="Grey">
+              <option value="wandering_sage">Wandering Sage</option>
+              <option value="mysterious_stranger">Mysterious Stranger</option>
+              <option value="lost_soldier">Lost Soldier</option>
+              <option value="town_drunk">Town Drunk</option>
+              <option value="cursed_merchant">Cursed Merchant</option>
+            </optgroup>
+            <optgroup label="Utility">
+              <option value="village_healer">Village Healer</option>
+              <option value="traveling_merchant">Traveling Merchant</option>
+              <option value="blacksmith_journeyman">Blacksmith Journeyman</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="panel-row">
+          <input id="spawn-npc-name" type="text" placeholder="NPC name override (optional)"/>
+          <select id="spawn-target">
+            <option value="all">All players</option>
+          </select>
+          <button onclick="dmSpawnNPC()">Spawn</button>
+        </div>
+      </div>
+
+      <!-- DM Environment Controls -->
+      <div id="dm-env-section" class="panel hidden">
+        <span class="panel-label">Environment <span id="env-limit-info" class="limit-badge"></span></span>
+        <div class="panel-row">
+          <select id="env-event-type">
+            <option value="weather">Weather Change</option>
+            <option value="terrain">Terrain Change</option>
+            <option value="event">Environmental Event</option>
+            <option value="loot">Loot Drop</option>
+          </select>
+          <input id="env-event-detail" type="text" placeholder="Description (optional)"/>
+        </div>
+        <div class="panel-row">
+          <select id="env-target">
+            <option value="all">All players</option>
+          </select>
+          <button onclick="dmTriggerEnv()">Trigger</button>
+        </div>
+      </div>
+
+      <!-- Snapshot export (in-room only) -->
+      <div id="snapshot-section" class="panel hidden">
+        <span class="panel-label">Snapshots</span>
+        <button id="export-campaign-btn" class="hidden" onclick="requestCampaignExport()">Export Campaign .txt</button>
+        <button id="export-character-btn" onclick="exportCharacterFromRoom()">Export Character .txt</button>
       </div>
 
     </main>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
   <script src="/js/app.js"></script>
+  <script>
+    // ── Game Text Animation ────────────────────────────────────────
+    const gameText = document.querySelector('.game-text');
+    
+    if (gameText) {
+      // Vertical floating animation
+      anime({
+        targets: ".game-text",
+        translateY: [-10, 10],
+        duration: 1200,
+        direction: "alternate",
+        loop: true,
+        easing: "easeInOutSine"
+      });
+
+      // Opacity pulse animation
+      anime({
+        targets: ".game-text",
+        opacity: [0.5, 1],
+        duration: 1600,
+        direction: "alternate",
+        loop: true
+      });
+    }
+  </script>
   <script>
     // Show room name in sidebar after joining
     socket.on('room:joined', ({ roomId }) => {
       document.getElementById('room-display').textContent = roomId;
     });
-
-    // Trade helper — matches partial socket ID the user typed
-    function triggerTrade() {
-      const partial = document.getElementById('trade-target').value.trim();
-      const file    = document.getElementById('trade-file').files[0];
-      if (!partial || !file) return;
-
-      const targetId = Object.keys(dataChannels).find(id => id.startsWith(partial));
-      if (!targetId) {
-        alert('No connected peer matching that ID. Check the system messages for their ID.');
-        return;
-      }
-      sendFileToPeer(targetId, file);
-    }
   </script>
+
+  <!-- ── Loading Screen ────────────────────────────────────────────────────── -->
+  <div id="loading-screen" class="loading-screen hidden">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-center"></div>
+      </div>
+      <div class="loading-text">LOADING...</div>
+      <div class="loading-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

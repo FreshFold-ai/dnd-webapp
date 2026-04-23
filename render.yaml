@@ -15,8 +15,11 @@ services:
     name: term-project-team-invincible
     runtime: node
     plan: free
+    branch: feature/dnd-pivot
+    region: oregon
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production

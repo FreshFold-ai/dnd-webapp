@@ -1,7 +1,95 @@
 ## Progress Report, Team Invincible
 
-Report Date: March 29, 2026
-Last Commit: def66f2, March 25, 2026
+Report Date: April 23, 2026
+
+### Who is in our group?
+
+Kobe, Devon, Urvish, Brandon.
+
+### What is our project?
+
+We are building a real-time multiplayer Dungeons & Dragons encounter engine. One player is the Dungeon Master (DM) and the rest are players. The DM spawns NPCs from a 13-template catalog, sets environment events, and narrates. Players receive interactive encounter cards, choose a decision, submit a d20 roll, and receive loot. All durable state persists in `localStorage` and exports to `.txt` files for portability between sessions.
+
+### What have we accomplished?
+
+#### Session & Room Infrastructure
+- Express + Socket.IO server running on Node.js, deployed to Render
+- Named password-protected rooms: DM creates, players join with a room code
+- Per-room transient state: `roomUsers`, `roomMeta`, `roomRounds`, `roomSpawnLimits`, `roomEnvLimits`, `roomEncounters`
+- Live user roster sidebar with connection status and reconnect handling
+- Round counter visible to all players; DM advances rounds
+
+#### Character System
+- Avatar picker with 8 emoji options
+- Character builder: name, class (8 options), race (8 options), level, HP
+- 6-stat array (Might, Agility, Endurance, Intellect, Intuition, Presence) with 44-point budget, each stat 3–20
+- Character persists to `localStorage` and reloads on rejoin
+- Character export/import as `.txt` (JSON), including full inventory
+
+#### Encounter Engine
+- 13 NPC templates across 3 roles (aggro, grey, utility) in `src/server/catalog.js`
+- Each template has stats, flavor text, death loot, negotiation loot, loot table, and difficulty values
+- Seeded RNG (`seededRandom`) for deterministic loot draws
+- `drawLoot()` draws 1–2 items from a loot table as `{ id, name }` objects
+- DM spawn panel: pick NPC type, optionally pick a specific template from a dropdown, override name, target all or individual players
+- Spawn limits: 1 aggro, up to 5 grey, up to 5 utility per round; only 1 active encounter at a time
+- DM force-resolve buttons: Death, Negotiate, Flee
+- Player encounter prompt card (rendered in message feed): shows NPC stats, option buttons, d20 roll input
+- `encounter:decide` → `encounter:roll` → `encounter:resolve` socket event flow
+- Server resolves based on roll vs. NPC AC/difficulty with `OUTCOME_FLAVOR` text
+- Loot distributed per-player via `perPlayerLoot` map; added to `localStorage` inventory on client
+- DM sees live NPC roster table (username, decision, roll, outcome)
+
+#### Environment System
+- DM triggers 4 event types: weather, terrain, environmental event, loot drop
+- Rate-limited per round (max 3 weather/terrain, max 5 events/loot per round)
+- Persistent weather/terrain events saved to `localStorage` for room export
+
+#### Inventory & Trade
+- Player inventory persists in `localStorage`
+- Inventory panel with item list and remove button
+- Peer-to-peer item trade via Socket.IO offer/accept/reject flow
+- WebRTC data channel setup for direct file trade (`sendFileToPeer` — UI trigger pending)
+
+#### Export / Import
+- Character export: `{ kind, character, inventory }` written as `.txt` file (fully client-side)
+- Character import: restores character fields and inventory from `.txt`
+- Room export: `{ kind, roomType, dmName, roomPassword, environment[], encounters[] }` as `.txt`
+- Room import: pre-fills join form with room credentials and restores env/encounter history
+
+#### DM Narration
+- DM-only narration input broadcasts styled messages to all players
+
+#### UI & CSS
+- Single-page app with hidden/shown panel sections
+- Dark fantasy theme with encounter card styles
+- Avatars visible in user roster
+- NPC roster table in DM panel
+- `.msg-card` base class with `.msg-card--encounter` and `.msg-card--resolved` modifiers
+- All encounter buttons created via DOM (no `onclick` inline handlers) — XSS safe
+
+#### Code Quality
+- `escapeHtml()` helper used for all user-supplied strings inserted into innerHTML
+- Removed unused `loadInventoryFromStorage()` function
+- Dead stub functions (`goBackToJoin`, `sendFileToPeer`) annotated with TODO comments
+- `OUTCOME_FLAVOR` keys aligned with server outcome strings (`negotiate`, `flee`, `success`)
+- `drawLoot()` returns `{ id, name }[]` array matching client expectations
+- Flat NPC stat fields (`hp`, `ac`, `str`, `dex`, `lootTable`) on all 13 templates
+
+### What still needs to be done
+
+- Bind `sendFileToPeer` to a UI trigger (file picker + Send button in trade panel)
+- Implement `goBackToJoin` (socket leave event, state reset, confirmation dialog)
+- Automated test suite (Jest or similar) for catalog/RNG/socket handler logic
+- CI/CD pipeline via GitHub Actions
+
+### Responsibility summary
+
+Brandon: Encounter engine, catalog, socket resolution logic.
+Devon: Character builder, avatar system, UI/CSS.
+Kobe: Room management, export/import, round system.
+Urvish: Deployment, inventory/trade, environment system, WebRTC.
+
 
 ### Who is in our group?
 
