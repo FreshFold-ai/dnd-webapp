@@ -38,6 +38,9 @@ app.use((req, res, next) => {
  */
 app.use(express.static(path.join(__dirname, "..", "..", "public")));
 
+/** Health check endpoint for Render deploy verification. */
+app.get('/health', (_, res) => res.status(200).json({ status: 'ok' }));
+
 app.use((err, req, res, next) => {
   console.error('[HTTP ERROR]', err);
   if (res.headersSent) {
