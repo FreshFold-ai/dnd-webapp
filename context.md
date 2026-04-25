@@ -1,6 +1,104 @@
 # RESUME — Quick resume instructions
 #
-# Date: 2026-04-11
+# Date: 2026-04-25
+#
+# Status: P2P MESH REFACTOR COMPLETE — next phase is Render deployment
+#
+# Required: Node.js (>=20), npm
+#
+# Quick start (local)
+# 1. Open a terminal at repository root.
+# 2. If `node_modules` is missing:
+#
+#    npm install
+#
+# 3. Start the server locally:
+#
+#    npm start
+#
+#    or for auto-reload during development:
+#
+#    npm run dev
+#
+# 4. Check the app on localhost:
+#
+#    http://localhost:3000
+#
+# Architecture Summary (as of 2026-04-25)
+# ─────────────────────────────────────────
+# The refactor from server-authoritative to P2P-mesh is 100% complete.
+#
+# Server role (src/server/index.js + socketHandlers.js):
+#   - Room creation / join (lobby only)
+#   - WebRTC signaling relay (offer/answer/ICE)
+#   - DM heartbeat keepalive + absence timer
+#   - Static file hosting
+#   - /health endpoint (for Render)
+#
+# Client role (public/js/app.js + p2pMesh.js + catalog.js):
+#   - Full-mesh WebRTC DataChannels via P2PMesh
+#   - partyMembers roster (player:announce handshake on peer:connected)
+#   - DM round engine: action submit → stat classification → authoritative d20 → resolution broadcast
+#   - DM encounter engine: NPC spawn → prompt targeted players → receive decide/roll → loot draw → resolved broadcast
+#   - All game events (chat, narration, trade, spawn, env, encounter) travel over P2P
+#   - All state persists in localStorage; server holds zero gameplay state
+#
+# Key files:
+#   public/js/p2pMesh.js   — WebRTC full-mesh abstraction (window.P2PMesh)
+#   public/js/catalog.js   — NPC templates, item registry, loot tables (window.GameCatalog)
+#   public/js/app.js       — All client logic (~1900 lines)
+#   src/server/socketHandlers.js — Lobby + signaling only (188 lines)
+#
+# P2P message convention: { t: 'event-type', ...payload } — _from injected on receive
+#
+# Remaining socket.on (server) — intentional, lobby/signaling only:
+#   room:joined, room:count, server:error, connect_error, disconnect,
+#   peer:joined, peer:left, dm:offline, room:export:campaign,
+#   webrtc:offer, webrtc:answer, webrtc:ice-candidate
+#
+# ─────────────────────────────────────────
+# NEXT: Render Deployment
+# See RENDER_DEPLOY.md for full step-by-step.
+#
+# render.yaml is already configured. You need to:
+#   1. Create a personal GitHub mirror repo (classroom org can't authorize Render easily)
+#   2. Push master to it:  git push deploy master
+#   3. Create free Render account at render.com (sign up with GitHub)
+#   4. New → Blueprint → select your mirror repo → Apply
+#   5. Render reads render.yaml, builds, deploys automatically
+#   6. Copy the .onrender.com URL, write to LIVE_DEMO_URL.txt, commit + push
+#
+# NOTE: render.yaml currently has `branch: feature/dnd-pivot` — update to `main` or `master`
+# to match whatever branch name you push to the mirror.
+#
+# Free tier notes:
+#   - No custom domain needed (you get a free .onrender.com subdomain)
+#   - Free tier spins down after 15 min of inactivity (cold start ~30s)
+#   - No database needed — server is stateless
+#   - No paid plan needed for this project
+#
+# Tunnels (local demos while developing)
+# - localtunnel (quick/ephemeral):
+#
+#   npm run tunnel:lt
+#
+# - ngrok (more reliable):
+#
+#   export NGROK_AUTHTOKEN=your_token
+#   npm run tunnel:ngrok
+#
+# E2E test
+#   node scripts/e2e-test.js
+#
+# Useful file locations
+# - `launcher/launcher-config.json` — launcher settings
+# - `LIVE_DEMO_URL.txt` — current public URL (ignored by git)
+# - `render.yaml` — Render blueprint (set branch to match mirror before deploying)
+# - `scripts/e2e-test.js` — quick two-client smoke test
+#
+# Environment vars
+# - `PORT` — server port (default 3000)
+# - `NODE_ENV` — set to `production` by Render automatically
 #
 # Purpose
 # - A minimal, copy-paste checklist so you (or another dev) can resume work quickly.
@@ -202,3 +300,269 @@ Where the live URL appears
 Next choice
 
 - If you want a persistent public URL, I recommend (step-by-step) either: reserve an ngrok subdomain (paid) or deploy to Render/Railway and map a cheap domain. Tell me which and I'll walk through the exact steps.
+
+---
+
+# Remaining Implementation Plan
+
+Date: 2026-04-25
+Status: P2P refactor ~40% complete. Server is done. Client is not yet updated.
+
+## What is already done
+
+- `src/server/socketHandlers.js` — rewritten to lobby-only (188 lines).
+  Emits: `room:joined` (with `peers[]`), `peer:joined`, `peer:left`, `dm:offline`.
+  Relays: `webrtc:offer`, `webrtc:answer`, `webrtc:ice-candidate`.
+  No game logic, no round state, no encounters, no messages.
+- `public/js/catalog.js` — new file. `window.GameCatalog`: NPC_TEMPLATES (13), ITEM_TYPES,
+  OPTION_POOLS, OUTCOME_FLAVOR, `getOptionsForEncounter()`, `drawLoot()`, `seededRandom()`.
+- `public/js/p2pMesh.js` — new file. `window.P2PMesh`: full-mesh WebRTC manager.
+  API: `connectToPeer`, `handleOffer`, `handleAnswer`, `handleIceCandidate`,
+  `broadcast`, `sendToPeer`, `on(type, fn)`, `off`, `getPeers`, `closeAll`.
+  Messages are typed JSON: `{ t: "type", ...payload }`.
+  Fires internal events: `peer:connected`, `peer:disconnected`.
+
+## What still needs to be done
+
+### Step 1 — Wire new scripts into index.html (5 min)
+
+In `public/index.html`, add before the existing `<script src="/js/app.js">` tag:
+
+```html
+<script src="/js/catalog.js"></script>
+<script src="/js/p2pMesh.js"></script>
+```
+
+Both must load before `app.js` since app.js will reference `window.GameCatalog`
+and `window.P2PMesh`.
+
+### Step 2 — Replace old WebRTC code in app.js with P2PMesh (30 min)
+
+Remove these from `app.js` (they are replaced by p2pMesh.js):
+- State vars: `peerConnections`, `dataChannels`, `pendingFiles`, `ICE_SERVERS`
+- Functions: `createPeerConnection()`, `setupDataChannel()`, `initiateOffer()`
+- Keep `sendFileToPeer()` stub but rewrite to use `P2PMesh.sendToPeer()` instead of `dataChannels`
+- Keep `updateConnectionStatus()` — still useful for Socket.IO status
+
+Wire P2PMesh signal relay at the top of the socket listener section:
+
+```js
+socket.on('webrtc:offer',         ({ fromId, offer })     => P2PMesh.handleOffer(fromId, offer));
+socket.on('webrtc:answer',        ({ fromId, answer })    => P2PMesh.handleAnswer(fromId, answer));
+socket.on('webrtc:ice-candidate', ({ fromId, candidate }) => P2PMesh.handleIceCandidate(fromId, candidate));
+```
+
+Remove the old `socket.on('webrtc:offer/answer/ice-candidate')` blocks (lines ~1680–1705).
+
+### Step 3 — Handle new server events in app.js (20 min)
+
+The new server emits different events. Update `app.js`:
+
+**`room:joined`** — now includes `peers[]` (socket IDs already in room).
+  After the existing join-UI logic, add:
+  ```js
+  (peers || []).forEach(peerId => P2PMesh.connectToPeer(peerId));
+  ```
+
+**`peer:joined`** (replaces `user:joined`) — server notifies room when someone joins.
+  ```js
+  socket.on('peer:joined', ({ socketId, username, character }) => {
+    addMessage(`${username} joined the party.`, 'system');
+    // existing peers connect back to the newcomer (newcomer already initiated via peers[])
+    // no need to call connectToPeer here — the joiner connects to us via peers[]
+  });
+  ```
+
+**`peer:left`** (replaces `user:left`) — server notifies room when someone leaves.
+  ```js
+  socket.on('peer:left', ({ socketId, username }) => {
+    addMessage(`${username} left the party.`, 'system');
+  });
+  ```
+
+**`dm:offline`** (new) — DM timed out or disconnected.
+  ```js
+  socket.on('dm:offline', ({ reason }) => {
+    addMessage('The DM has gone offline. Session paused.', 'error');
+    P2PMesh.closeAll();
+  });
+  ```
+
+**Remove** the now-dead `socket.on('user:joined')` and `socket.on('user:left')` handlers.
+
+**`room:started`** — this event no longer exists in the new server. The DM now receives
+  `room:joined` (with `isDM: true`) instead. Remove the `socket.on('room:started')` handler
+  and move any needed logic (room code display, storage reset) into the `room:joined` handler
+  behind an `if (isDM)` guard. Note: the existing `room:started` handler references
+  `roomMeta` which is out of scope — this is an existing bug.
+
+### Step 4 — DM heartbeat timer (5 min)
+
+After the DM's `room:joined`, start a keepalive so the server doesn't time out the room:
+
+```js
+if (isDM) {
+  setInterval(() => socket.emit('room:heartbeat'), 30_000);
+}
+```
+
+### Step 5 — Client-side roster system (replaces server-emitted room:users) (30 min)
+
+The new server never emits `room:users`. Each client must maintain the party list P2P.
+
+On `P2PMesh.on('peer:connected', ({ peerId }) => ...)`:
+  - Send own identity + character to the new peer:
+    ```js
+    P2PMesh.sendToPeer(peerId, {
+      t: 'player:announce',
+      socketId: socket.id,
+      username: myUsername,
+      isDM,
+      character: myCharacter,
+      avatar: myAvatar,
+    });
+    ```
+
+On `P2PMesh.on('player:announce', (payload) => ...)`:
+  - Add/update peer in a local `partyMembers` map keyed by `payload.socketId`.
+  - Call `updateUserRoster(Object.values(partyMembers))`.
+
+On `P2PMesh.on('peer:disconnected', ({ peerId }) => ...)`:
+  - Remove from `partyMembers`. Re-render roster.
+
+Initialize own entry in `partyMembers` on join so self appears in roster.
+Remove the now-dead `socket.on('room:users')` handler.
+Update `updateTradePlayerList`, `updateDmWhisperList`, `updateSpawnPlayerList` to
+use `partyMembers` values instead of the server-pushed `users` array.
+
+### Step 6 — Replace socket emissions with P2P broadcasts (45 min)
+
+Each function that was emitting a game event to the server must now broadcast/send over P2P.
+Message type convention (`t` field) is defined here for consistency:
+
+| Old `socket.emit(...)` | New P2P equivalent |
+|---|---|
+| `room:message { text }` | `P2PMesh.broadcast({ t:'chat', from:myUsername, text })` |
+| `game:narrate { text }` | `P2PMesh.broadcast({ t:'narrate', from:myUsername, text })` |
+| `dm:whisper { targetId, text }` | `P2PMesh.sendToPeer(targetId, { t:'whisper', from:myUsername, text })` |
+| `round:submit-action { text }` | `P2PMesh.broadcast({ t:'round:action', from:myUsername, text })` (DM resolves) |
+| `round:submit-roll` | `P2PMesh.broadcast({ t:'round:roll', from:myUsername, roll:d20() })` |
+| `room:advance-round` | `P2PMesh.broadcast({ t:'round:advance', roundNumber })` (DM only) |
+| `trade:item { targetId, item }` | `P2PMesh.sendToPeer(targetId, { t:'trade:offer', from:myUsername, item })` |
+| `dm:spawn { npcType, ... }` | `P2PMesh.broadcast({ t:'encounter:start', ...resolvedEncounter })` (DM only) |
+| `dm:env { eventType, detail }` | `P2PMesh.broadcast({ t:'env:event', eventType, detail, from:myUsername })` |
+| `encounter:decide { eid, ... }` | `P2PMesh.sendToPeer(dmSocketId, { t:'encounter:decide', eid, ... })` |
+| `encounter:roll { eid, roll }` | `P2PMesh.sendToPeer(dmSocketId, { t:'encounter:roll', eid, roll })` |
+| `room:export:campaign` | Local read of sessionStorage — no socket needed. Trigger `downloadTxtFile()` directly. |
+
+Track `dmSocketId` from `room:joined` (`roomMeta` doesn't include it yet; use `peers[0]`
+for players joining after the DM since the DM is always the first socket in the room).
+Better: include `dmSocketId` in `room:joined` emit from server (small server change, ~2 lines).
+
+### Step 7 — Replace socket.on game handlers with P2PMesh.on handlers (45 min)
+
+Remove all dead `socket.on` handlers for events the server no longer emits, and add
+equivalent `P2PMesh.on(type, handler)` listeners. Map:
+
+| Remove `socket.on(...)` | Add `P2PMesh.on(type, ...)` |
+|---|---|
+| `room:round` | `'round:state'` — DM broadcasts full round state after each change |
+| `round:action:declared` | `'round:action'` |
+| `round:action:prompted` | (DM-local resolution; DM responds via `P2PMesh.sendToPeer`) |
+| `round:action:assigned` | `'round:assigned'` — DM sends back to the submitting player |
+| `round:action:roll:accepted` | `'round:roll:ack'` — DM acks after receiving roll |
+| `round:action:roll-locked` | `'round:roll'` (observe others' rolls) |
+| `round:actions:resolved` | `'round:resolved'` — DM broadcasts resolution results |
+| `room:message` | `'chat'` |
+| `dm:whisper` | `'whisper'` |
+| `game:roll` | `'game:roll'` |
+| `game:narrate` | `'narrate'` |
+| `trade:received` | `'trade:offer'` — receiving end accepts and updates inventory |
+| `trade:sent` | local (sender removes item on submit, no ack needed) |
+| `trade:notify` | `'trade:offer'` (DM sees all; filter `_from` isn't targetId) |
+| `dm:spawn:result` | (DM is now authoritative; no ack needed) |
+| `dm:spawn:event` | `'encounter:start'` |
+| `dm:env:result` | (DM is now authoritative; local update) |
+| `dm:env:event` | `'env:event'` |
+| `room:spawn-limits` | local tracking in DM client |
+| `room:env-limits` | local tracking in DM client |
+| `encounter:start` | `'encounter:start'` |
+| `encounter:roster` | `'encounter:roster'` — DM broadcasts as decisions come in |
+| `encounter:prompt` | `'encounter:prompt'` — DM sends to targeted players |
+| `encounter:decision:ack` | `'encounter:decision:ack'` — DM sends back to deciding player |
+| `encounter:roll:ack` | `'encounter:roll:ack'` — DM sends back to rolling player |
+| `encounter:ready` | `'encounter:ready'` — DM broadcasts |
+| `encounter:resolved` | `'encounter:resolved'` — DM broadcasts |
+| `room:export:campaign` | remove; export is now fully local |
+
+### Step 8 — Client-side encounter + round engine (DM only) (60 min)
+
+The server no longer resolves encounters or rounds. The DM client must do this.
+Use `window.GameCatalog` for all data lookups.
+
+**Encounter engine (DM client):**
+- On `dmSpawnNPC()`: look up template from `GameCatalog.NPC_TEMPLATES`, generate `eid`,
+  compute options via `GameCatalog.getOptionsForEncounter(role, seed)`.
+  Broadcast `{ t:'encounter:start', eid, npcName, npcRole, npcStats, options }` to targets.
+  Also broadcast `{ t:'encounter:prompt', eid, ... }` to each target player.
+- On `P2PMesh.on('encounter:decide', ...)`: record decision, send back
+  `{ t:'encounter:decision:ack', eid, optionLabel, needsRoll, check }` to that player.
+  Broadcast updated `{ t:'encounter:roster', eid, roster }` to DM's own view.
+- On `P2PMesh.on('encounter:roll', ...)`: record roll, resolve if all players ready.
+  Send `{ t:'encounter:roll:ack', eid, ... }` back to roller.
+  When all ready, broadcast `{ t:'encounter:ready', eid }`.
+- On DM force-resolve or all players ready + round advance:
+  compute outcome + loot via `GameCatalog.drawLoot()`.
+  Broadcast `{ t:'encounter:resolved', eid, outcome, flavor, perPlayerLoot }`.
+
+**Round engine (DM client):**
+- On `P2PMesh.on('round:action', ...)`: DM records action, assigns stat check
+  (pick relevant stat from action text heuristic or a fixed map), sends back
+  `{ t:'round:assigned', text, statKey, statLabel, statValue, threshold }` to that player.
+  Broadcast `{ t:'round:action', from, text }` to all (observed by other players).
+- On `P2PMesh.on('round:roll', ...)`: DM records roll, broadcasts
+  `{ t:'round:roll', from, roll, text }` to all.
+- On `advanceRound()` (DM): resolve all pending actions, broadcast
+  `{ t:'round:resolved', roundNumber, results[] }` then
+  `{ t:'round:state', roundNumber, phase:'action' }` to open next round.
+
+**Spawn limits and env limits:** track locally in DM client state vars
+(`spawnLimits`, `envLimits`); no server involved.
+
+### Step 9 — Misc cleanup (15 min)
+
+- Remove the duplicate `function displayError()` declaration (appears twice in app.js).
+- The `saveInventoryToStorage()` function is defined at line ~1590 but called at line ~1555
+  (before its definition). Move it earlier or convert to use `writeStoredJson` inline.
+- `goBackToJoin`: implement — call `P2PMesh.closeAll()`, reset state vars, hide `chatSection`,
+  show `joinSection`. (Was a TODO stub in the old code.)
+- `sendFileToPeer`: rewrite to use `P2PMesh.sendToPeer()` for the data channel,
+  and add a file-picker button in the trade panel to call it. (Was a TODO stub.)
+
+## File change summary
+
+| File | Change |
+|---|---|
+| `public/index.html` | Add 2 script tags for `catalog.js` and `p2pMesh.js` |
+| `public/js/app.js` | ~600 lines removed (old WebRTC + dead socket handlers), ~400 lines added (P2PMesh wiring, roster system, client-side game engines) |
+| `src/server/socketHandlers.js` | Already done — no further changes needed |
+| `public/js/catalog.js` | Already done — no further changes needed |
+| `public/js/p2pMesh.js` | Already done — no further changes needed |
+
+## Small optional server change (recommended)
+
+In `socketHandlers.js`, include `dmSocketId` in the `room:joined` payload sent to players:
+
+```js
+socket.emit('room:joined', {
+  roomId,
+  socketId: socket.id,
+  isDM: false,
+  roomMeta: { roomType: room.roomType, dmName: room.dmName },
+  peers,
+  dmSocketId: room.dmSocketId,   // ← add this
+});
+```
+
+This lets player clients correctly target the DM for `encounter:decide` and
+`encounter:roll` without guessing which peer is the DM.

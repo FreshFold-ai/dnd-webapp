@@ -15,7 +15,7 @@ services:
     name: term-project-team-invincible
     runtime: node
     plan: free
-    branch: feature/dnd-pivot
+    branch: main
     region: oregon
     buildCommand: npm install
     startCommand: npm start

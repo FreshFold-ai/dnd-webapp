@@ -1,7 +1,7 @@
 # Render Deployment — Resume Context
 
-**Date written:** April 23, 2026
-**Branch to deploy:** `feature/dnd-pivot`
+**Date written:** April 23, 2026 · Updated April 25, 2026
+**Branch to deploy:** `master` (local) → `main` on the mirror
 **Source repo:** `mjdecker-teaching/network-architecture-spring-2026-term-project-lab-empty-1` (classroom — do not deploy from here)
 **Deploy repo:** a personal GitHub mirror of the above (see B1)
 
@@ -40,7 +40,7 @@ services:
     name: term-project-team-invincible
     runtime: node
     plan: free
-    branch: feature/dnd-pivot
+    branch: main
     region: oregon
     buildCommand: npm install
     startCommand: npm start
@@ -78,26 +78,17 @@ Then in the terminal at the repo root:
 git remote add deploy https://github.com/YOUR_USERNAME/dnd-room-app.git
 
 # Push the current branch to it (as 'main' on the mirror)
-git push deploy feature/dnd-pivot:main
+git push deploy master:main
 ```
 
-**Then update `render.yaml` to target `main`** (the branch name on the mirror):
-
-```bash
-# In render.yaml, change:  branch: feature/dnd-pivot
-#                      to:  branch: main
-# Then commit and push to both remotes:
-git add render.yaml
-git commit -m "chore: set render.yaml branch to main for mirror deploy"
-git push origin feature/dnd-pivot
-git push deploy feature/dnd-pivot:main
+`render.yaml` already has `branch: main` — no extra commit needed.
 ```
 
 From this point on, whenever you want to redeploy just push to the mirror:
 
 ```bash
-git push origin feature/dnd-pivot   # keeps classroom repo in sync
-git push deploy feature/dnd-pivot:main  # triggers Render auto-deploy
+git push origin master          # keeps classroom repo in sync
+git push deploy master:main     # triggers Render auto-deploy
 ```
 
 ### B2. Create a free Render account
@@ -139,8 +130,8 @@ Open it in a browser to confirm the landing page loads, then commit the URL:
 echo "https://term-project-team-invincible.onrender.com" > LIVE_DEMO_URL.txt
 git add LIVE_DEMO_URL.txt
 git commit -m "docs: update live demo URL"
-git push origin feature/dnd-pivot       # classroom repo
-git push deploy feature/dnd-pivot:main  # Render mirror
+git push origin master        # classroom repo
+git push deploy master:main   # Render mirror
 ```
 
 ---

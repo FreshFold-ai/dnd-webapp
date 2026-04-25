@@ -18,15 +18,13 @@ let envLimits = {};
 let currentRoundNumber = 1;
 let currentRoundPhase = 'action';
 let myPendingRoundAction = null;
- 
-// peerConnections: Map<socketId, RTCPeerConnection>
-const peerConnections = {};
-// dataChannels: Map<socketId, RTCDataChannel>
-const dataChannels = {};
-// pendingFiles: Map<socketId, { name, chunks, totalSize }>
+let dmSocketId = '';          // socket ID of the DM in the current room
+
+// partyMembers: Map<socketId, member> — local roster maintained via P2P player:announce
+const partyMembers = {};
+
+// pendingFiles: Map<socketId, { name, chunks, totalSize }> — kept for file receive reassembly
 const pendingFiles = {};
- 
-const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
  
 // ─── DOM Refs ─────────────────────────────────────────────────────────────────
 let feed, memberCount, joinSection, chatSection;
@@ -443,7 +441,7 @@ function sendDmWhisper() {
   const text = dmWhisperInput?.value.trim();
   if (!targetId) { displayError('Choose a player to whisper to.'); return; }
   if (!text) { displayError('Whisper message cannot be empty.'); return; }
-  socket.emit('dm:whisper', { targetId, text });
+  P2PMesh.sendToPeer(targetId, { t: 'dm:whisper', text });
   addMessage(`🔒 [You → player] ${text}`, 'narrate');
   if (dmWhisperInput) dmWhisperInput.value = '';
 }
@@ -827,9 +825,7 @@ function updateUserRoster(users) {
   });
 }
 
-function displayError(message) {
-  addMessage(`Error: ${message}`, 'error');
-}
+// (displayError is defined earlier in the file)
  
 // ─── Start / Join ─────────────────────────────────────────────────────────────
 function startRoomFromInputs() {
@@ -970,7 +966,7 @@ function sendMessageFromInput() {
     return;
   }
 
-  socket.emit('room:message', { text });
+  P2PMesh.broadcast({ t: 'room:message', text });
   messageInput.value = '';
 }
 
@@ -981,7 +977,7 @@ function submitRoundAction() {
     displayError('Describe what you want to attempt this round.');
     return;
   }
-  socket.emit('round:submit-action', { text });
+  P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-action', text });
 }
  
 // ─── DnD: Dice Roll ───────────────────────────────────────────────────────────
@@ -994,7 +990,7 @@ function rollDice(die = 20) {
     displayError('Round actions use a d20 check only.');
     return;
   }
-  socket.emit('round:submit-roll');
+  P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-roll' });
 }
 
 function advanceRound() {
@@ -1002,15 +998,147 @@ function advanceRound() {
     displayError('Only the DM can advance rounds.');
     return;
   }
-  socket.emit('room:advance-round');
+  dmAdvanceRound();
 }
  
+// ─── DM Round Engine ──────────────────────────────────────────────────────────
+// keyed by socketId → { text, statKey, statLabel, statScore, statValue, threshold, roll, username }
+const dmRoundActions = {};
+
+// Keyword → stat mapping for action classification
+const ACTION_STAT_MAP = [
+  { keywords: ['attack','strike','hit','fight','slash','stab','shoot','charge','bash','smash','swing'], stat: 'might' },
+  { keywords: ['dodge','run','jump','climb','hide','sneak','flee','sprint','roll','tumble','dash'], stat: 'agility' },
+  { keywords: ['endure','resist','hold','survive','tank','block','defend','withstand','brace'], stat: 'endurance' },
+  { keywords: ['cast','spell','ritual','identify','study','analyze','investigate','decipher','read','craft'], stat: 'intellect' },
+  { keywords: ['sense','detect','perceive','listen','watch','intuit','feel','search','spot'], stat: 'intuition' },
+  { keywords: ['persuade','charm','intimidate','deceive','negotiate','convince','inspire','bluff','command','taunt'], stat: 'presence' },
+];
+const STAT_LABELS = { might: 'Might', agility: 'Agility', endurance: 'Endurance', intellect: 'Intellect', intuition: 'Intuition', presence: 'Presence' };
+const ACTION_THRESHOLD = 12;
+
+function dmPickStat(text) {
+  const lower = text.toLowerCase();
+  for (const { keywords, stat } of ACTION_STAT_MAP) {
+    if (keywords.some(k => lower.includes(k))) return stat;
+  }
+  return 'might';
+}
+
+// DM receives a player's declared action text → assign stat check, broadcast declaration
+P2PMesh.on('round:submit-action', ({ text, _from }) => {
+  if (!isDM) return;
+  const member = partyMembers[_from];
+  if (!member) return;
+  const username = member.username;
+  const stats = member.character?.stats || {};
+  const statKey   = dmPickStat(text);
+  const statLabel = STAT_LABELS[statKey];
+  const statScore = Number(stats[statKey] || 10);
+  const statValue = Math.floor((statScore - 10) / 2);
+  const threshold = ACTION_THRESHOLD;
+
+  dmRoundActions[_from] = { text, statKey, statLabel, statScore, statValue, threshold, roll: null, username };
+
+  // Broadcast declaration to all (including DM's own feed via local call below)
+  P2PMesh.broadcast({ t: 'round:action:declared', from: username, text });
+  addMessage(`${username} commits: ${text}`, 'system');
+
+  // Broadcast prompted check to all observers
+  P2PMesh.broadcast({ t: 'round:action:prompted', from: username, text, statLabel, statValue, threshold });
+
+  // Tell the acting player their assigned stat check
+  P2PMesh.sendToPeer(_from, { t: 'round:action:assigned', text, statKey, statLabel, statScore, statValue, threshold });
+});
+
+// DM receives player's roll trigger → generate authoritative roll, ack to player, tell all
+P2PMesh.on('round:submit-roll', ({ _from }) => {
+  if (!isDM) return;
+  const entry = dmRoundActions[_from];
+  if (!entry || entry.roll !== null) return; // already rolled
+  const roll = Math.floor(Math.random() * 20) + 1;
+  entry.roll = roll;
+
+  P2PMesh.sendToPeer(_from, {
+    t: 'round:action:roll:accepted',
+    text: entry.text,
+    statKey: entry.statKey,
+    statLabel: entry.statLabel,
+    statScore: entry.statScore,
+    statValue: entry.statValue,
+    threshold: entry.threshold,
+    roll,
+  });
+  P2PMesh.broadcast({ t: 'round:action:roll-locked', from: entry.username, text: entry.text, roll });
+  addMessage(`${entry.username} locks in a d20 roll of ${roll} for "${entry.text}".`, 'roll');
+});
+
+// DM advances the round: resolve all pending actions, broadcast results, bump round number
+function dmAdvanceRound() {
+  const roundNumber = currentRoundNumber;
+  const results = Object.entries(dmRoundActions).map(([sid, entry]) => {
+    const roll = entry.roll ?? Math.floor(Math.random() * 20) + 1;
+    const total = roll + entry.statValue;
+    const success = total >= entry.threshold;
+    const resolutionText = success
+      ? `${entry.username} succeeds with a ${total}!`
+      : `${entry.username} fails with a ${total}.`;
+    return {
+      actor: entry.username,
+      text: entry.text,
+      statKey: entry.statKey,
+      statLabel: entry.statLabel,
+      statScore: entry.statScore,
+      statValue: entry.statValue,
+      threshold: entry.threshold,
+      roll,
+      total,
+      success,
+      resolutionText,
+      roundNumber,
+    };
+  });
+
+  // Clear actions for next round
+  Object.keys(dmRoundActions).forEach(k => delete dmRoundActions[k]);
+
+  const nextRound = roundNumber + 1;
+  currentRoundNumber = nextRound;
+  currentRoundPhase = 'action';
+
+  // Broadcast results to all peers
+  P2PMesh.broadcast({ t: 'round:actions:resolved', roundNumber, results });
+  // Broadcast new round state
+  P2PMesh.broadcast({ t: 'room:round', roundNumber: nextRound, turnUsername: '', phase: 'action' });
+
+  // Apply locally on DM's own display
+  results.forEach(result => {
+    addMessage(formatRoundResolutionMessage({ ...result, roundNumber }), result.success ? 'system' : 'error');
+  });
+  if (roundDisplay) roundDisplay.textContent = String(nextRound);
+  if (phaseDisplay) phaseDisplay.textContent = 'Action Phase';
+  if (turnDisplay) turnDisplay.textContent = 'No active adventurer';
+  updateRoundActionUI();
+}
+
 // ─── Trade Item ───────────────────────────────────────────────────────────────
 function triggerTrade() {
   const targetId = tradeTargetSelect?.value;
   if (!targetId) { displayError('Choose a player to trade with.'); return; }
   if (!selectedTradeItem) { displayError('Select an item from your inventory.'); return; }
-  socket.emit('trade:item', { targetId, item: selectedTradeItem });
+  P2PMesh.sendToPeer(targetId, { t: 'trade:item', item: selectedTradeItem });
+  // Also CC the DM so they can observe the trade
+  if (dmSocketId && dmSocketId !== socket.id && dmSocketId !== targetId) {
+    P2PMesh.sendToPeer(dmSocketId, { t: 'trade:item', item: selectedTradeItem, _observedBy: 'dm' });
+  }
+  // Local sender confirmation
+  const toUsername = partyMembers[targetId]?.username || targetId;
+  let removed = false;
+  myInventory = myInventory.filter(i => { if (!removed && i === selectedTradeItem) { removed = true; return false; } return true; });
+  writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
+  renderInventory();
+  renderTradeInventory();
+  addMessage(`💼 You sent ${selectedTradeItem || 'an item'} to ${toUsername}.`, 'system');
 }
 
 // ─── DM: Spawn NPC ────────────────────────────────────────────────────────────
@@ -1020,7 +1148,9 @@ function dmSpawnNPC() {
   const templateId   = document.getElementById('spawn-npc-template')?.value || '';
   const npcName      = spawnNpcName?.value.trim() || '';
   const target       = spawnTarget?.value || 'all';
-  socket.emit('dm:spawn', { npcType, templateId: templateId || undefined, npcName, target });
+  P2PMesh.broadcast({ t: 'dm:spawn', npcType, templateId: templateId || undefined, npcName, target });
+  // Run the encounter engine locally (DM is authoritative)
+  dmStartEncounter({ npcType, templateId: templateId || undefined, npcName, target });
   if (spawnNpcName) spawnNpcName.value = '';
 }
 
@@ -1030,125 +1160,204 @@ function dmTriggerEnv() {
   const eventType = envEventType?.value || 'weather';
   const detail    = envEventDetail?.value.trim() || '';
   const target    = envTarget?.value || 'all';
-  socket.emit('dm:env', { eventType, detail, target });
+  P2PMesh.broadcast({ t: 'dm:env', eventType, detail, target });
+  // DM saves environment events in tab-scoped storage for room export.
+  if (eventType === 'weather' || eventType === 'terrain') {
+    const env = readStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
+    env.push({ type: eventType, detail: detail || '', at: new Date().toISOString() });
+    writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, env);
+  }
   if (envEventDetail) envEventDetail.value = '';
 }
 
-// ─── DnD: DM Narrate ──────────────────────────────────────────────────────────
+// --- DM Encounter Engine ---
+let activeEncounter = null; // { eid, npc, targetSocketIds, roster, resolvedName, seed }
+
+function dmPickTemplate(npcType, templateId) {
+  const { NPC_TEMPLATES } = GameCatalog;
+  if (templateId && NPC_TEMPLATES[templateId]) return NPC_TEMPLATES[templateId];
+  const matches = Object.values(NPC_TEMPLATES).filter(t => t.role === npcType);
+  if (matches.length) return matches[Math.floor(Math.random() * matches.length)];
+  return NPC_TEMPLATES.goblin_scout;
+}
+
+function dmStartEncounter({ npcType, templateId, npcName, target }) {
+  if (!isDM) return;
+  const npc = dmPickTemplate(npcType, templateId);
+  const eid = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const at  = new Date().toISOString();
+  const dmName = myUsername;
+
+  const allPlayers = Object.values(partyMembers).filter(m => !m.isDM);
+  const targetSocketIds = target === 'all'
+    ? allPlayers.map(m => m.socketId)
+    : [target].filter(sid => partyMembers[sid] && !partyMembers[sid].isDM);
+
+  const npcStats = { hp: npc.hp, ac: npc.ac, str: npc.str, dex: npc.dex };
+  const resolvedName = npcName || npc.name;
+  const seed = parseInt(eid.replace(/\D/g, '').slice(0, 8), 10) || Date.now();
+  const options = GameCatalog.getOptionsForEncounter(npc.role, seed);
+
+  const roster = targetSocketIds.map(sid => ({
+    socketId: sid,
+    username: partyMembers[sid]?.username || sid,
+    decision: null, check: null, roll: null, total: null, success: null,
+  }));
+
+  activeEncounter = { eid, npc, targetSocketIds, roster, resolvedName, seed };
+
+  // Save to encounter storage
+  const enc = readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
+  enc.push({ eid, npcName: resolvedName, npcType: npc.role, at });
+  writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, enc);
+
+  const roleLabel = { aggro: '\u2694\ufe0f AGGRO', grey: '\ud83c\udf2b\ufe0f GREY', utility: '\ud83d\udd27 UTILITY' }[npc.role] || npc.role;
+  P2PMesh.broadcast({ t: 'encounter:start', eid, npcName: resolvedName, npcRole: npc.role, npcStats, targetSocketIds, dmName, at });
+  addMessage(`[ENCOUNTER STARTED] ${roleLabel} "${resolvedName}" | HP:${npc.hp} AC:${npc.ac} | ${targetSocketIds.length} target(s)`, 'narrate');
+
+  targetSocketIds.forEach(sid => {
+    P2PMesh.sendToPeer(sid, { t: 'encounter:prompt', eid, npcName: resolvedName, npcRole: npc.role, npcStats, options, dmName, at });
+  });
+}
+
+P2PMesh.on('encounter:decide', ({ eid, optionId, optionLabel, _from }) => {
+  if (!isDM || !activeEncounter || activeEncounter.eid !== eid) return;
+  const entry = activeEncounter.roster.find(r => r.socketId === _from);
+  if (!entry || entry.decision) return;
+
+  const options = GameCatalog.getOptionsForEncounter(activeEncounter.npc.role, activeEncounter.seed);
+  const chosenOpt = options.find(o => o.id === optionId) || { id: optionId, label: optionLabel, reqRoll: true, rollStat: 'might', difficulty: 0 };
+  const needsRoll = Boolean(chosenOpt.reqRoll);
+
+  const member = partyMembers[_from];
+  const stats  = member?.character?.stats || {};
+  const STAT_KEY_MAP = { atk: 'might', spd: 'agility', might: 'might', agility: 'agility', endurance: 'endurance', intellect: 'intellect', intuition: 'intuition', presence: 'presence' };
+  const resolvedStat = STAT_KEY_MAP[chosenOpt.rollStat] || 'might';
+  const statScore = Number(stats[resolvedStat] || 10);
+  const statValue = Math.floor((statScore - 10) / 2);
+  const threshold = Math.max(8, 10 + (chosenOpt.difficulty || 0));
+  const check = { stat: resolvedStat, statLabel: STAT_LABELS[resolvedStat] || resolvedStat, statValue, threshold, requiresRoll: needsRoll };
+  const resolutionText = needsRoll ? null : `${optionLabel} requires no roll.`;
+
+  entry.decision = { optionId, optionLabel, check };
+  entry.check    = check;
+
+  P2PMesh.sendToPeer(_from, { t: 'encounter:decision:ack', eid, optionLabel, needsRoll, check: { statLabel: check.statLabel, statValue, threshold }, resolutionText });
+  dmUpdateEncounterRosterPanel(eid);
+});
+
+P2PMesh.on('encounter:roll', ({ eid, _from }) => {
+  if (!isDM || !activeEncounter || activeEncounter.eid !== eid) return;
+  const entry = activeEncounter.roster.find(r => r.socketId === _from);
+  if (!entry || entry.roll !== null) return;
+
+  const roll    = Math.floor(Math.random() * 20) + 1;
+  const sv      = entry.check?.statValue ?? 0;
+  const thresh  = entry.check?.threshold ?? 12;
+  const total   = roll + sv;
+  const success = total >= thresh;
+
+  entry.roll = roll; entry.total = total; entry.success = success;
+
+  P2PMesh.sendToPeer(_from, { t: 'encounter:roll:ack', eid, roll, statLabel: entry.check?.statLabel, statValue: sv, threshold: thresh, total, success });
+
+  const allReady = activeEncounter.roster.every(r => {
+    if (!r.decision) return false;
+    return !r.check?.requiresRoll || r.roll !== null;
+  });
+  if (allReady) {
+    activeEncounter.targetSocketIds.forEach(sid => {
+      P2PMesh.sendToPeer(sid, { t: 'encounter:ready', eid, npcName: activeEncounter.resolvedName });
+    });
+  }
+
+  dmUpdateEncounterRosterPanel(eid);
+});
+
+function dmUpdateEncounterRosterPanel(eid) {
+  if (!activeEncounter || activeEncounter.eid !== eid) return;
+  const el = document.getElementById('dm-encounter-roster');
+  if (!el) return;
+  const ready = activeEncounter.roster.every(r => r.decision && (!r.check?.requiresRoll || r.roll !== null));
+  const summary = ready ? '<div class="roster-row"><strong>Encounter ready. Advance the round to resolve it.</strong></div>' : '';
+  el.innerHTML = summary + activeEncounter.roster.map(p => {
+    let rollText = 'awaiting choice';
+    if (p.decision && p.check?.requiresRoll && p.roll === null) rollText = `awaiting d20 vs ${p.check.threshold}`;
+    else if (p.decision && p.check?.requiresRoll) rollText = `d20 ${p.roll}+${p.check.statValue}=${p.total} (${p.success ? 'success' : 'failure'})`;
+    else if (p.decision) rollText = 'no roll required';
+    return `<div class="roster-row"><span>${escapeHtml(p.username)}</span><span>${p.decision ? escapeHtml(p.decision.optionLabel) : '\u2014'}</span><span>${rollText}</span></div>`;
+  }).join('');
+}
+
+function dmResolveEncounter(eid, outcome) {
+  if (!isDM || !activeEncounter || activeEncounter.eid !== eid) return;
+  const { npc, roster, resolvedName, seed } = activeEncounter;
+  const at = new Date().toISOString();
+
+  const flavorPool = GameCatalog.OUTCOME_FLAVOR[outcome] || GameCatalog.OUTCOME_FLAVOR.success;
+  const flavor = flavorPool[Math.floor(Math.random() * flavorPool.length)]
+    .replace('{{npc}}', resolvedName).replace('{{player}}', myUsername);
+
+  const lootTable = outcome === 'death' ? (npc.deathLoot || []) : outcome === 'negotiate' ? (npc.negLoot || []) : [];
+  const perPlayerLoot = {};
+  roster.forEach(r => { perPlayerLoot[r.socketId] = GameCatalog.drawLoot(lootTable, seed ^ (r.socketId.charCodeAt(0) || 1)); });
+  perPlayerLoot[socket.id] = GameCatalog.drawLoot(lootTable, seed ^ 0xff);
+
+  activeEncounter = null;
+
+  P2PMesh.broadcast({ t: 'encounter:resolved', eid, outcome, flavor, roster, perPlayerLoot, at });
+
+  const myLoot = perPlayerLoot[socket.id] || [];
+  myLoot.forEach(item => myInventory.push(item.name));
+  if (myLoot.length) { writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory); renderInventory(); }
+
+  const enc2 = readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
+  const rec = enc2.find(e => e.eid === eid);
+  if (rec) { rec.outcome = outcome; rec.resolvedAt = at; writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, enc2); }
+
+  const outcomeEmoji = { death: '\ud83d\udc80', negotiate: '\ud83e\udd1d', flee: '\ud83d\udca8', success: '\u2728' }[outcome] || '\u2694\ufe0f';
+  addMessage(`${outcomeEmoji} Encounter resolved: ${outcome}. ${flavor}`, 'narrate');
+  const dmPanel = document.getElementById('dm-encounter-panel');
+  if (dmPanel) dmPanel.remove();
+} ──────────────────────────────────────────────────────────
 function sendNarration() {
   const text = narrateInput.value.trim();
   if (!text) return;
-  socket.emit('game:narrate', { text });
+  P2PMesh.broadcast({ t: 'game:narrate', text });
   narrateInput.value = '';
 }
 
-// ─── WebRTC: Create a peer connection to a new player ────────────────────────
-function createPeerConnection(targetId) {
-  const pc = new RTCPeerConnection(ICE_SERVERS);
-  peerConnections[targetId] = pc;
- 
-  // Send ICE candidates to the other peer via the server
-  pc.onicecandidate = ({ candidate }) => {
-    if (candidate) {
-      socket.emit('webrtc:ice-candidate', { targetId, candidate });
-    }
-  };
- 
-  // When the remote side opens a DataChannel (they initiated)
-  pc.ondatachannel = ({ channel }) => {
-    setupDataChannel(channel, targetId);
-  };
- 
-  return pc;
-}
- 
-// ─── WebRTC: Wire up a DataChannel for file transfers ────────────────────────
-function setupDataChannel(channel, peerId) {
-  dataChannels[peerId] = channel;
-  channel.binaryType = 'arraybuffer';
- 
-  channel.onopen = () => {
-    addMessage(`Direct P2P link established with ${peerId.slice(0, 6)}…`, 'system');
-  };
- 
-  channel.onmessage = ({ data }) => {
-    // Protocol: first message is JSON metadata, rest are binary chunks
-    if (typeof data === 'string') {
-      const meta = JSON.parse(data);
-      pendingFiles[peerId] = { name: meta.name, chunks: [], totalSize: meta.size };
-    } else {
-      const file = pendingFiles[peerId];
-      if (!file) return;
-      file.chunks.push(data);
-      const received = file.chunks.reduce((n, c) => n + c.byteLength, 0);
- 
-      if (received >= file.totalSize) {
-        // Reassemble and offer as download
-        const blob = new Blob(file.chunks);
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = file.name;
-        a.textContent = `Download "${file.name}"`;
-        const p = document.createElement('p');
-        p.className = 'msg msg--trade';
-        p.appendChild(a);
-        feed.appendChild(p);
-        feed.scrollTop = feed.scrollHeight;
-        delete pendingFiles[peerId];
-      }
-    }
-  };
-}
- 
-// ─── WebRTC: Initiate offer to a new peer ────────────────────────────────────
-async function initiateOffer(targetId) {
-  const pc      = createPeerConnection(targetId);
-  const channel = pc.createDataChannel('file-trade');
-  setupDataChannel(channel, targetId);
- 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit('webrtc:offer', { targetId, offer });
-}
  
 // ─── P2P File Trade ───────────────────────────────────────────────────────────
 // TODO: integrate file-send UI trigger (bind to a 'Send File' button in inventory/trade panel)
 function sendFileToPeer(targetId, file) {
-  const channel = dataChannels[targetId];
-  if (!channel || channel.readyState !== 'open') {
+  if (!P2PMesh.getPeers().includes(targetId)) {
     addMessage('No open P2P channel to that player yet.', 'system');
     return;
   }
 
-  // Show loading screen
-  if (loadingScreen) {
-    loadingScreen.classList.remove('hidden');
-  }
+  if (loadingScreen) loadingScreen.classList.remove('hidden');
 
-  // Send metadata first, then the raw file in chunks
-  channel.send(JSON.stringify({ name: file.name, size: file.size }));
- 
+  // Send JSON metadata first so the receiver knows name + total size
+  P2PMesh.sendToPeer(targetId, { t: 'file:meta', name: file.name, size: file.size });
+
   const CHUNK = 16 * 1024; // 16 KB chunks
   let offset = 0;
   const reader = new FileReader();
- 
+
   reader.onload = (e) => {
-    channel.send(e.target.result);
+    P2PMesh.sendBinaryToPeer(targetId, e.target.result);
     offset += e.target.result.byteLength;
-    if (offset < file.size) readSlice(offset);
-    else {
+    if (offset < file.size) {
+      readSlice(offset);
+    } else {
       addMessage(`Sent "${file.name}" to ${targetId.slice(0, 6)}…`, 'system');
-      // Hide loading screen
-      if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
-      }
+      if (loadingScreen) loadingScreen.classList.add('hidden');
     }
   };
- 
+
   function readSlice(o) {
-    const slice = file.slice(o, o + CHUNK);
-    reader.readAsArrayBuffer(slice);
+    reader.readAsArrayBuffer(file.slice(o, o + CHUNK));
   }
   readSlice(0);
 }
@@ -1180,11 +1389,86 @@ function updateConnectionStatus(status) {
   }
 }
  
+// ─── P2P File Receive ─────────────────────────────────────────────────────────
+
+// ─── P2P Roster System ───────────────────────────────────────────────────────
+
+// When a new DataChannel opens, send our identity so the peer can add us to their roster
+P2PMesh.on('peer:connected', ({ peerId }) => {
+  P2PMesh.sendToPeer(peerId, {
+    t: 'player:announce',
+    socketId: socket.id,
+    username: myUsername,
+    isDM,
+    character: myCharacter,
+    avatar: myAvatar,
+  });
+});
+
+// Receive a peer's identity and add/update them in the local roster
+P2PMesh.on('player:announce', ({ socketId: peerId, username, isDM: peerIsDM, character, avatar, _from }) => {
+  partyMembers[peerId || _from] = {
+    socketId: peerId || _from,
+    username: username || 'Unknown',
+    isDM: Boolean(peerIsDM),
+    character: character || null,
+    avatar: avatar || '🧙',
+  };
+  updateUserRoster(Object.values(partyMembers));
+  updateTradePlayerList(Object.values(partyMembers));
+  updateDmWhisperList(Object.values(partyMembers));
+  updateSpawnPlayerList(Object.values(partyMembers));
+});
+
+// Remove a peer from the roster when their DataChannel closes
+P2PMesh.on('peer:disconnected', ({ peerId }) => {
+  // peerId is the socketId used as the key in pcs/channels inside P2PMesh
+  // find the partyMembers entry whose socketId matches
+  const key = Object.keys(partyMembers).find(k => k === peerId);
+  if (key) delete partyMembers[key];
+  updateUserRoster(Object.values(partyMembers));
+  updateTradePlayerList(Object.values(partyMembers));
+  updateDmWhisperList(Object.values(partyMembers));
+  updateSpawnPlayerList(Object.values(partyMembers));
+});
+
+// ─── P2P File Receive ─────────────────────────────────────────────────────────
+
+P2PMesh.on('file:meta', ({ name, size, _from }) => {
+  pendingFiles[_from] = { name, chunks: [], totalSize: size };
+});
+
+P2PMesh.on('binary:data', ({ buffer, _from }) => {
+  const file = pendingFiles[_from];
+  if (!file) return;
+  file.chunks.push(buffer);
+  const received = file.chunks.reduce((n, c) => n + c.byteLength, 0);
+  if (received >= file.totalSize) {
+    const blob = new Blob(file.chunks);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = file.name;
+    a.textContent = `Download "${file.name}"`;
+    const p = document.createElement('p');
+    p.className = 'msg msg--trade';
+    p.appendChild(a);
+    feed.appendChild(p);
+    feed.scrollTop = feed.scrollHeight;
+    delete pendingFiles[_from];
+  }
+});
+
 // ─── Socket Event Listeners ───────────────────────────────────────────────────
  
-socket.on('room:joined', ({ roomId, socketId, roomMeta }) => {
+socket.on('room:joined', ({ roomId, socketId, isDM: joinedAsDM, roomMeta, peers = [], dmSocketId: serverDmSocketId }) => {
   if (loadingScreen) loadingScreen.classList.add('hidden');
   myRoomId = roomId;
+  // Sync authoritative isDM flag from server payload
+  if (joinedAsDM !== undefined) isDM = joinedAsDM;
+  // Store the DM's socket ID so players can target them directly
+  if (serverDmSocketId) dmSocketId = serverDmSocketId;
+  else if (isDM) dmSocketId = socketId; // DM's own socket
   if (roomMeta && roomMeta.roomType) myRoomType = roomMeta.roomType;
   joinSection.classList.add('hidden');
   chatSection.classList.remove('hidden');
@@ -1225,6 +1509,38 @@ socket.on('room:joined', ({ roomId, socketId, roomMeta }) => {
   updateRoundActionUI();
   addMessage(`You joined room "${roomId}" as ${myUsername}.`, 'system');
 
+  // Seed own entry in partyMembers so self appears in roster immediately
+  partyMembers[socket.id] = {
+    socketId: socket.id,
+    username: myUsername,
+    isDM,
+    character: myCharacter,
+    avatar: myAvatar,
+  };
+  updateUserRoster(Object.values(partyMembers));
+
+  // Connect to all peers already in the room (joiner initiates WebRTC to each)
+  // peer:connected fires on each open DataChannel and triggers player:announce exchange
+  peers.forEach(peerId => P2PMesh.connectToPeer(peerId));
+
+  // DM-specific: show room code and reset portable state for fresh rooms
+  if (isDM) {
+    if (createdRoomCode) {
+      createdRoomCode.textContent = `Room started: ${roomId} (${myRoomType})`;
+      createdRoomCode.classList.remove('hidden');
+    }
+    if (copyRoomCodeBtn) copyRoomCodeBtn.classList.remove('hidden');
+    if (joinRoomIdInput) joinRoomIdInput.value = roomId;
+    addMessage(`Room "${roomId}" created. Share this code with your players.`, 'system');
+    // Imported rooms restore state before room:start; fresh rooms start clean.
+    if (shouldResetPortableRoomState({ source: 'manual' })) {
+      writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
+      writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
+    }
+    // Keepalive: reset the server's DM absence timer every 30 s
+    setInterval(() => socket.emit('room:heartbeat'), 30_000);
+  }
+
   if (pendingNormalizationLines.length > 0) {
     addMessage('--- Normalization Report ---', 'system');
     pendingNormalizationLines.forEach((line) => addMessage(line, 'system'));
@@ -1233,41 +1549,8 @@ socket.on('room:joined', ({ roomId, socketId, roomMeta }) => {
   }
 });
 
-socket.on('room:started', ({ roomId, roomType, dmName }) => {
-  myRoomType = roomType || myRoomType;
-  myUsername = dmName || myUsername;
-  if (createdRoomCode) {
-    createdRoomCode.textContent = `Room started: ${roomId} (${roomType})`;
-    createdRoomCode.classList.remove('hidden');
-  }
-  if (copyRoomCodeBtn) copyRoomCodeBtn.classList.remove('hidden');
-  if (joinRoomIdInput) joinRoomIdInput.value = roomId;
-  addMessage(`DM ${dmName} started room "${roomId}".`, 'system');
-
-  // Imported rooms already restored portable state before room:start; fresh rooms should start clean.
-  if (isDM) {
-    myRoomId = roomId;
-    if (shouldResetPortableRoomState(roomMeta)) {
-      writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
-      writeStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
-    }
-  }
-});
-
 socket.on('room:count', ({ count }) => {
   memberCount.textContent = count;
-});
-
-socket.on('room:history', (messages) => {
-  if (!Array.isArray(messages) || messages.length === 0) return;
-  addMessage('--- Recent room history ---', 'system');
-  messages.forEach(({ from, text, isDMSender }) => {
-    const label = isDMSender ? `[DM] ${from}` : from;
-    const isNarration = typeof text === 'string' && text.startsWith('[Narration] ');
-    const body = isNarration ? text.replace('[Narration] ', '') : text;
-    addMessage(`${label}: ${body}`, isNarration ? 'narrate' : 'chat');
-  });
-  addMessage('--- End room history ---', 'system');
 });
 
 socket.on('server:error', ({ message }) => {
@@ -1283,24 +1566,20 @@ socket.on('disconnect', (reason) => {
   addMessage(`Disconnected from server: ${reason}`, 'error');
 });
 
-socket.on('user:joined', ({ socketId, username }) => {
+socket.on('peer:joined', ({ socketId, username }) => {
   addMessage(`${username} joined the party.`, 'system');
-  // We initiate the WebRTC offer to the newcomer
-  initiateOffer(socketId);
 });
  
-socket.on('user:left', ({ username }) => {
+socket.on('peer:left', ({ socketId, username }) => {
   addMessage(`${username} left the party.`, 'system');
 });
- 
-socket.on('room:users', ({ users }) => {
-  updateUserRoster(users);
-  updateTradePlayerList(users);
-  updateDmWhisperList(users);
-  updateSpawnPlayerList(users);
-});
 
-socket.on('room:round', ({ roundNumber, turnUsername, phase }) => {
+socket.on('dm:offline', ({ reason }) => {
+  addMessage('The DM has gone offline. Session paused.', 'error');
+  P2PMesh.closeAll();
+});
+ 
+P2PMesh.on('room:round', ({ roundNumber, turnUsername, phase }) => {
   const numericRound = Number(roundNumber || 1);
   const roundChanged = numericRound !== currentRoundNumber;
   currentRoundNumber = numericRound;
@@ -1323,17 +1602,17 @@ socket.on('room:round', ({ roundNumber, turnUsername, phase }) => {
   updateRoundActionUI();
 });
 
-socket.on('round:action:declared', ({ from, text }) => {
+P2PMesh.on('round:action:declared', ({ from, text }) => {
   if (from === myUsername) return;
   addMessage(`${from} commits: ${text}`, 'system');
 });
 
-socket.on('round:action:prompted', ({ from, text, statLabel, statValue, threshold }) => {
+P2PMesh.on('round:action:prompted', ({ from, text, statLabel, statValue, threshold }) => {
   if (from === myUsername) return;
   addMessage(`[Check] ${from}: roll d20 + ${statLabel} (${formatActionStatValue(statValue)}) vs ${threshold} for "${text}".`, 'system');
 });
 
-socket.on('round:action:assigned', ({ text, statKey, statLabel, statScore, statValue, threshold }) => {
+P2PMesh.on('round:action:assigned', ({ text, statKey, statLabel, statScore, statValue, threshold }) => {
   myPendingRoundAction = {
     text,
     statKey,
@@ -1348,7 +1627,7 @@ socket.on('round:action:assigned', ({ text, statKey, statLabel, statScore, statV
   addMessage(`[Check] Roll d20 + ${statLabel} (${formatActionStatValue(statValue)}) vs ${threshold} for "${text}".`, 'system');
 });
 
-socket.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore, statValue, threshold, roll }) => {
+P2PMesh.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore, statValue, threshold, roll }) => {
   myPendingRoundAction = {
     text,
     statKey,
@@ -1362,12 +1641,12 @@ socket.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore, 
   addMessage(`[Roll Locked] d20 ${roll} locked for "${text}". Resolution happens when the DM advances the round.`, 'roll');
 });
 
-socket.on('round:action:roll-locked', ({ from, text, roll }) => {
+P2PMesh.on('round:action:roll-locked', ({ from, text, roll }) => {
   if (from === myUsername) return;
   addMessage(`${from} locks in a d20 roll of ${roll} for "${text}".`, 'roll');
 });
 
-socket.on('round:actions:resolved', ({ roundNumber, results }) => {
+P2PMesh.on('round:actions:resolved', ({ roundNumber, results }) => {
   results.forEach((result) => {
     addMessage(formatRoundResolutionMessage({ ...result, roundNumber }), result.success ? 'system' : 'error');
   });
@@ -1375,12 +1654,15 @@ socket.on('round:actions:resolved', ({ roundNumber, results }) => {
   updateRoundActionUI();
 });
 
-socket.on('room:message', ({ from, text, isDMSender }) => {
+P2PMesh.on('room:message', ({ text, _from }) => {
+  const sender = partyMembers[_from] || {};
+  const from = sender.username || _from;
+  const isDMSender = Boolean(sender.isDM);
   const label = isDMSender ? `[DM] ${from}` : from;
   addMessage(`${label}: ${text}`);
 });
 
-socket.on('dm:whisper', ({ from, text }) => {
+P2PMesh.on('dm:whisper', ({ text }) => {
   addMessage(`🔒 [DM → you] ${escapeHtml ? escapeHtml(text) : text}`, 'narrate');
 });
 
@@ -1413,17 +1695,23 @@ socket.on('room:export:campaign', ({ campaign }) => {
  
 // ─── DnD Game Events ──────────────────────────────────────────────────────────
  
-socket.on('game:roll', ({ from, result, die }) => {
-  addMessage(`🎲 ${from} rolled a d${die} — got ${result}!`, 'roll');
+P2PMesh.on('game:roll', ({ from, result, die, _from }) => {
+  const senderName = from || partyMembers[_from]?.username || _from;
+  addMessage(`🎲 ${senderName} rolled a d${die} — got ${result}!`, 'roll');
 });
  
-socket.on('game:narrate', ({ from, text }) => {
+P2PMesh.on('game:narrate', ({ text }) => {
   addMessage(`📜 [DM] ${text}`, 'narrate');
 });
 
 // ─── Trade / Inventory ────────────────────────────────────────────────────────
 
-socket.on('trade:received', ({ fromUsername, item }) => {
+P2PMesh.on('trade:item', ({ item, _from, _observedBy }) => {
+  const fromUsername = partyMembers[_from]?.username || _from;
+  if (isDM || _observedBy === 'dm') {
+    addMessage(`🔔 Trade: ${fromUsername} → someone: ${item}`, 'system');
+    return;
+  }
   myInventory.push(item);
   writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
   renderInventory();
@@ -1431,26 +1719,18 @@ socket.on('trade:received', ({ fromUsername, item }) => {
   addMessage(`💼 ${fromUsername} traded you: ${item}`, 'trade');
 });
 
-socket.on('trade:sent', ({ toUsername, item }) => {
-  let removed = false;
-  myInventory = myInventory.filter(i => { if (!removed && i === item) { removed = true; return false; } return true; });
-  writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
-  renderInventory();
-  renderTradeInventory();
-  addMessage(`💼 You sent ${item || 'an item'} to ${toUsername}.`, 'system');
-});
-
-socket.on('trade:notify', ({ fromUsername, toUsername, item }) => {
-  if (isDM) addMessage(`🔔 Trade: ${fromUsername} → ${toUsername}: ${item}`, 'system');
-});
-
 // ─── DM Spawn / Environment ───────────────────────────────────────────────────
 
-socket.on('dm:spawn:result', ({ ok, message, npcType, npcName, limits }) => {
-  if (!ok) { displayError(message); return; }
-  spawnLimits = limits || spawnLimits;
-  updateSpawnLimitDisplay();
+// Players receive dm:env broadcasts from the DM
+P2PMesh.on('dm:env', ({ eventType, detail }) => {
+  if (isDM) return; // DM already handled locally in dmTriggerEnv
+  const typeLabel = { weather: '🌩️ Weather Change', terrain: '🗺️ Terrain Change', event: '⚡ Environmental Event', loot: '💰 Loot Drop' }[eventType] || eventType;
+  addMessage(`${typeLabel}${detail ? ': ' + detail : ''}`, 'narrate');
 });
+
+// Players receive dm:spawn broadcasts as encounter prompt cards (handled by encounter:start)
+// dm:spawn on players is a no-op here — encounter engine (Step 8) emits encounter:start
+
 
 // ─── Encounter: DM View ───────────────────────────────────────────────────────
 // Safely encode user-supplied strings before inserting into innerHTML
@@ -1463,7 +1743,7 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
-socket.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketIds, dmName, at }) => {
+P2PMesh.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketIds, dmName, at }) => {
   const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
   addMessage(
     `[ENCOUNTER STARTED] ${roleLabel} "${npcName}" | HP:${npcStats.hp} AC:${npcStats.ac} STR:${npcStats.str} DEX:${npcStats.dex} | Targets: ${targetSocketIds.length} player(s)`,
@@ -1492,7 +1772,7 @@ socket.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketIds
   msgBox.parentElement.insertBefore(panel, msgBox);
 });
 
-socket.on('encounter:roster', ({ eid, roster, ready }) => {
+P2PMesh.on('encounter:roster', ({ eid, roster, ready }) => {
   const el = document.getElementById('dm-encounter-roster');
   if (!el) return;
   const summary = ready
@@ -1513,13 +1793,14 @@ socket.on('encounter:roster', ({ eid, roster, ready }) => {
 });
 
 function dmForceResolve(eid, outcome) {
-  socket.emit('encounter:resolve', { eid, outcome });
+  // DM resolves locally (engine broadcasts encounter:resolved to all peers)
+  dmResolveEncounter(eid, outcome);
 }
 
 // ─── Encounter: Player Prompt Card ───────────────────────────────────────────
 let activeEncounterEid = null;
 
-socket.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmName, at }) => {
+P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmName, at }) => {
   activeEncounterEid = eid;
   const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
   const msgBox = document.getElementById('message-feed');
@@ -1556,13 +1837,13 @@ socket.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNam
 
 function submitEncounterDecision(eid, optionId, optionLabel) {
   if (activeEncounterEid !== eid) return;
-  socket.emit('encounter:decide', { eid, optionId, optionLabel });
+  P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:decide', eid, optionId, optionLabel });
   // Disable decision buttons
   const card = document.getElementById(`encounter-card-${eid}`);
   if (card) card.querySelectorAll('.encounter-btn').forEach(b => b.disabled = true);
 }
 
-socket.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, resolutionText }) => {
+P2PMesh.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, resolutionText }) => {
   const res = document.getElementById(`enc-result-${eid}`);
   const rollSection = document.getElementById(`enc-roll-${eid}`);
   const rollButton = rollSection ? rollSection.querySelector('button') : null;
@@ -1583,10 +1864,10 @@ socket.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, resol
 function submitEncounterRoll(eid) {
   const input = document.getElementById(`enc-roll-input-${eid}`);
   const roll = Math.max(1, Math.min(20, parseInt(input?.value || '10', 10)));
-  socket.emit('encounter:roll', { eid, roll });
+  P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:roll', eid, roll });
 }
 
-socket.on('encounter:roll:ack', ({ eid, roll, statLabel, statValue, threshold, total, success }) => {
+P2PMesh.on('encounter:roll:ack', ({ eid, roll, statLabel, statValue, threshold, total, success }) => {
   const res = document.getElementById(`enc-result-${eid}`);
   if (res) {
     res.textContent = `Roll locked: ${roll} + ${formatActionStatValue(statValue)} = ${total} vs ${threshold} (${success ? 'success' : 'failure'}). Resolution happens when the DM advances the round.`;
@@ -1595,7 +1876,7 @@ socket.on('encounter:roll:ack', ({ eid, roll, statLabel, statValue, threshold, t
   if (rollSection) rollSection.querySelector('button').disabled = true;
 });
 
-socket.on('encounter:ready', ({ eid, npcName }) => {
+P2PMesh.on('encounter:ready', ({ eid, npcName }) => {
   const res = document.getElementById(`enc-result-${eid}`);
   if (res) {
     const baseText = res.textContent ? `${res.textContent} ` : '';
@@ -1605,7 +1886,7 @@ socket.on('encounter:ready', ({ eid, npcName }) => {
 });
 
 // ─── Encounter: Resolution ─────────────────────────────────────────────────────
-socket.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot, at }) => {
+P2PMesh.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot, at }) => {
   // Remove DM panel if present
   const dmPanel = document.getElementById('dm-encounter-panel');
   if (dmPanel) dmPanel.remove();
@@ -1629,10 +1910,8 @@ socket.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot, 
   if (myLoot.length > 0) {
     lootHtml = `<div class="encounter-loot">🎁 Loot: ${myLoot.map(i => i.name).join(', ')}</div>`;
     // Add to inventory
-    myLoot.forEach(item => {
-      myInventory.push(item.name);
-      saveInventoryToStorage();
-    });
+    myLoot.forEach(item => { myInventory.push(item.name); });
+    saveInventoryToStorage();
     renderInventory();
   }
 
@@ -1658,37 +1937,8 @@ function saveInventoryToStorage() {
   writeStoredJson(RUNTIME_STORAGE_KEYS.inventory, myInventory);
 }
 
-socket.on('dm:env:result', ({ ok, message, eventType, limits }) => {
-  if (!ok) { displayError(message); return; }
-  envLimits = limits || envLimits;
-  updateEnvLimitDisplay();
-});
-
-socket.on('dm:spawn:event', ({ npcType, npcName, dmName }) => {
-  // Encounter prompt cards are shown via encounter:prompt; this is a no-op for players
-  // DM announcement is handled by encounter:start
-});
-
-socket.on('dm:env:event', ({ eventType, detail, dmName }) => {
-  const typeLabel = { weather: '🌩️ Weather Change', terrain: '🗺️ Terrain Change', event: '⚡ Environmental Event', loot: '💰 Loot Drop' }[eventType] || eventType;
-  addMessage(`${typeLabel}${detail ? ': ' + detail : ''}`, 'narrate');
-  // DM saves environment events in tab-scoped storage for room export.
-  if (isDM && (eventType === 'weather' || eventType === 'terrain')) {
-    const env = readStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
-    env.push({ type: eventType, detail: detail || '', at: new Date().toISOString() });
-    writeStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, env);
-  }
-});
-
-socket.on('room:spawn-limits', ({ limits }) => {
-  spawnLimits = limits || {};
-  updateSpawnLimitDisplay();
-});
-
-socket.on('room:env-limits', ({ limits }) => {
-  envLimits = limits || {};
-  updateEnvLimitDisplay();
-});
+// dm:env:result, dm:spawn:event, dm:env:event, room:spawn-limits, room:env-limits removed —
+// DM validates locally; limit tracking moved to Step 8 engine
 
 function updateSpawnLimitDisplay() {
   if (!spawnLimitInfo) return;
@@ -1708,25 +1958,11 @@ function updateEnvLimitDisplay() {
   envLimitInfo.textContent = parts.length ? `(${parts.join(', ')})` : '';
 }
  
-// ─── WebRTC Signaling ─────────────────────────────────────────────────────────
- 
-socket.on('webrtc:offer', async ({ fromId, offer }) => {
-  const pc = createPeerConnection(fromId);
-  await pc.setRemoteDescription(offer);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  socket.emit('webrtc:answer', { targetId: fromId, answer });
-});
- 
-socket.on('webrtc:answer', async ({ fromId, answer }) => {
-  const pc = peerConnections[fromId];
-  if (pc) await pc.setRemoteDescription(answer);
-});
- 
-socket.on('webrtc:ice-candidate', async ({ fromId, candidate }) => {
-  const pc = peerConnections[fromId];
-  if (pc) await pc.addIceCandidate(candidate);
-});
+// ─── WebRTC Signaling (relay via P2PMesh) ────────────────────────────────────
+
+socket.on('webrtc:offer',         ({ fromId, offer })     => P2PMesh.handleOffer(fromId, offer));
+socket.on('webrtc:answer',        ({ fromId, answer })    => P2PMesh.handleAnswer(fromId, answer));
+socket.on('webrtc:ice-candidate', ({ fromId, candidate }) => P2PMesh.handleIceCandidate(fromId, candidate));
  
 // ─── Key bindings ─────────────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {

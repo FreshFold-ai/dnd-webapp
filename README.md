@@ -1,27 +1,28 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/0Kd2Byaj)
 
-# DnD Encounter Engine — Real-Time Multiplayer
+# DnD Encounter Engine — Real-Time P2P Multiplayer
 
-A browser-based Dungeons & Dragons encounter engine for real-time multiplayer sessions. One player acts as Dungeon Master (DM); the rest are players. The DM spawns NPCs, sets the environment, and narrates. Players respond to encounter prompts, roll dice, and receive loot. All durable state lives in `localStorage`; the server holds only transient session state.
+A browser-based Dungeons & Dragons encounter engine for real-time multiplayer sessions. One player acts as Dungeon Master (DM); the rest are players. The DM spawns NPCs, sets the environment, and narrates. Players respond to encounter prompts, roll dice, and receive loot.
+
+**Architecture:** The server is a lightweight lobby — it handles room creation/join and WebRTC signaling only. All gameplay (rounds, encounters, chat, trade, narration, inventory) runs over **WebRTC DataChannels** in a full P2P mesh. All durable state lives in `localStorage`; the server holds zero gameplay state.
 
 ## Live Demo
 
-Start a tunnel and check `LIVE_DEMO_URL.txt` for the ephemeral public URL:
+Check `LIVE_DEMO_URL.txt` for the deployed URL, or run locally with a tunnel:
 
 ```bash
 npm install
-# localtunnel (ephemeral, no account needed)
-npm run tunnel:lt
-# ngrok (requires NGROK_AUTHTOKEN env var)
+npm run tunnel:lt          # localtunnel (ephemeral, no account needed)
+# or
 export NGROK_AUTHTOKEN=your_token
-npm run tunnel:ngrok
+npm run tunnel:ngrok       # ngrok (more stable)
 ```
 
 ## Tech Stack
 
-- **Node.js 20+** + **Express 4** — HTTP server and static file hosting
-- **Socket.IO 4** — real-time bidirectional events
-- **WebRTC** (via browser API) — peer-to-peer connections for direct file trade
+- **Node.js 20+** + **Express 4** — HTTP server and static file hosting (lobby + signaling only)
+- **Socket.IO 4** — room creation/join and WebRTC signaling relay
+- **WebRTC DataChannels** — full P2P mesh for all gameplay events (via `p2pMesh.js`)
 - **Vanilla JS / HTML5 / CSS3** — no frontend framework
 
 ## Project Structure
@@ -29,14 +30,16 @@ npm run tunnel:ngrok
 ```
 ├── src/
 │   └── server/
-│       ├── index.js             # Express + HTTP server, entry point
-│       ├── socketHandlers.js    # All Socket.IO event handlers and room state
-│       └── catalog.js          # NPC templates, item registry, seeded RNG, loot tables
+│       ├── index.js             # Express + HTTP server, /health endpoint
+│       └── socketHandlers.js    # Lobby + WebRTC signaling only (188 lines)
 ├── public/
 │   ├── index.html              # Single-page shell with all UI panels
-│   ├── js/app.js               # All client-side logic (socket, WebRTC, DOM)
+│   ├── js/
+│   │   ├── app.js              # All client logic — roster, round engine, encounter engine, UI
+│   │   ├── p2pMesh.js          # WebRTC full-mesh abstraction (window.P2PMesh)
+│   │   └── catalog.js          # NPC templates, item registry, loot tables (window.GameCatalog)
 │   └── css/styles.css          # All styles
-└── launcher/                   # Optional Electron-style local launcher
+└── launcher/                   # Optional local launcher UI
 ```
 
 ## Install & Run
@@ -52,17 +55,18 @@ npm run dev        # nodemon --watch auto-restart on save
 | Feature | Description |
 |---|---|
 | Room creation / join | DM creates a named, password-protected room; players join with a sharable room code |
+| P2P full mesh | After join, all gameplay flows over WebRTC DataChannels — no gameplay data touches the server |
 | Character builder | Avatar, name, class, race, level, HP, and 6-stat array (44 points, each 3–20) |
-| DM narration | DM broadcasts styled narration messages to all players in the room |
-| Encounter engine | DM spawns an NPC (aggro/grey/utility) from a 13-template catalog; players receive an interactive prompt card |
-| Decision + roll system | Players choose an action (attack, negotiate, flee, etc.) then submit a d20 roll; server resolves the outcome |
-| Loot distribution | On encounter resolution, server draws loot from the NPC's loot table and pushes items to each player's inventory |
-| Inventory / trade | Players maintain a persistent inventory in `localStorage`; direct P2P item trade via WebRTC data channels |
-| Environment controls | DM triggers weather, terrain, event, or loot-drop environment events (limited per round) |
-| NPC roster display | DM sees a live table of every player's current decision and roll |
+| DM narration | DM broadcasts styled narration messages to all players via P2P |
+| Round engine | DM tracks per-player actions; keyword classifier assigns ability checks; DM resolves all pending actions each round |
+| Encounter engine | DM spawns an NPC (aggro/grey/utility) from a 13-template catalog; players receive an interactive prompt card over P2P |
+| Decision + roll system | Players choose an action then submit a d20 roll; DM client resolves the outcome authoritatively via P2P |
+| Loot distribution | On encounter resolution, DM client draws loot via seeded RNG and broadcasts per-player results |
+| Inventory / trade | Persistent `localStorage` inventory; direct P2P item send (`sendToPeer`) with DM CC'd |
+| Environment controls | DM triggers weather, terrain, event, or loot-drop environment events |
+| NPC roster display | DM sees a live table of every player's current decision and roll status |
 | Export / import | Characters and room state export to `.txt` (JSON) files; importable on next session |
-| Spawn limits | 1 AGGRO, up to 5 grey, up to 5 utility NPCs per round; only one active encounter at a time |
-| Seeded RNG | Deterministic loot draws keyed to encounter ID seed |
+| Seeded RNG | Deterministic loot draws keyed to encounter ID seed (`GameCatalog.seededRandom`) |
 
 ## NPC Catalog (13 templates)
 
@@ -82,44 +86,66 @@ npm run dev        # nodemon --watch auto-restart on save
 | `traveling_merchant` | utility | 10 | 6 |
 | `blacksmith_journeyman` | utility | 18 | 9 |
 
-## Socket Event Reference
+## Event Reference
 
-### Client → Server
+All gameplay runs over **WebRTC DataChannels** (P2PMesh). The server only handles lobby and WebRTC signaling.
+
+### Lobby — Client → Server (Socket.IO)
 
 | Event | Key Payload Fields | Description |
 |---|---|---|
 | `room:join` | `roomId, username, password, character, isDM` | Join or create a room |
-| `room:message` | `text` | Send a chat message |
-| `game:narrate` | `text` | DM broadcasts a narration (DM only) |
-| `dm:spawn` | `npcType, templateId?, npcName?, target` | DM spawns an NPC encounter |
-| `dm:env` | `eventType, detail?, target` | DM triggers an environment event |
-| `encounter:decide` | `eid, optionId, optionLabel` | Player submits their decision |
-| `encounter:roll` | `eid, roll` | Player submits their d20 roll |
-| `encounter:resolve` | `eid, outcome` | DM force-resolves an encounter |
-| `trade:offer` | `toSocketId, item` | Offer an item to another player |
-| `trade:accept` | `tradeId` | Accept a pending trade offer |
-| `trade:reject` | `tradeId` | Reject a pending trade offer |
+| `room:start` | `roomId` | DM signals room is starting |
+| `room:heartbeat` | `roomId` | Keep-alive tick |
+| `room:export:campaign` | `roomId, data` | DM exports room state to server for download |
 
-### Server → Client
+### Lobby — Server → Client (Socket.IO)
 
 | Event | Key Payload Fields | Description |
 |---|---|---|
 | `room:joined` | `roomId, socketId, users, meta` | Successful room join |
-| `room:started` | `roomId, dmName, roomType` | DM has started the session |
-| `room:user:joined` | `username, socketId` | Another user joined |
-| `room:user:left` | `username, socketId` | A user disconnected |
-| `room:message` | `username, text, at` | Broadcast chat message |
-| `game:narrate` | `text, dmName, at` | DM narration broadcast |
-| `encounter:start` | `eid, npcName, npcRole, npcStats, targetSocketIds` | Encounter started (DM view) |
-| `encounter:prompt` | `eid, npcName, npcRole, npcStats, options` | Player receives encounter card |
-| `encounter:roster` | `eid, roster` | Live decision/roll status table for DM |
-| `encounter:decision:ack` | `eid` | Server acknowledged player decision |
-| `encounter:roll:ack` | `eid, roll, outcome` | Server acknowledged player roll |
-| `encounter:resolved` | `eid, outcome, flavor, perPlayerLoot` | Encounter ended; loot distributed |
-| `dm:spawn:result` | `ok, message?, npcType, npcName, limits` | Spawn acknowledgement |
-| `dm:env:result` | `ok, message?, eventType, limits` | Environment event acknowledgement |
-| `dm:env:event` | `eventType, detail, dmName` | Environment event broadcast |
+| `room:count` | `count` | Current occupant count update |
+| `peer:joined` | `socketId, username` | Another peer's signaling info available |
+| `peer:left` | `socketId` | Peer disconnected from signaling |
+| `dm:offline` | — | DM has disconnected |
 | `server:error` | `message` | Generic server error |
+| `webrtc:offer` | `from, offer` | WebRTC offer relay |
+| `webrtc:answer` | `from, answer` | WebRTC answer relay |
+| `webrtc:ice-candidate` | `from, candidate` | ICE candidate relay |
+
+### P2P DataChannel — Broadcast (all peers)
+
+| Event (`t`) | Key Fields | Description |
+|---|---|---|
+| `player:announce` | `socketId, username, isDM, character, avatar` | Peer introduces themselves on connect |
+| `room:message` | `username, text, at` | Chat message |
+| `game:narrate` | `text, dmName, at` | DM narration |
+| `dm:spawn` | `npcType, npcName, templateId` | DM spawns NPC (DM → all) |
+| `dm:env` | `eventType, detail, dmName` | DM environment event |
+| `room:round` | `round, actions` | DM broadcasts new round state |
+| `round:action:declared` | `username, action` | Player's action declared to all |
+| `round:action:prompted` | `username, stat, dc` | DM assigned a check (visible to all) |
+| `round:action:roll-locked` | `username, roll, result` | Player's roll locked in |
+| `round:actions:resolved` | `results[]` | All round actions resolved with outcomes |
+| `encounter:start` | `eid, npcName, npcRole, npcStats` | Encounter started (DM → all) |
+| `encounter:resolved` | `eid, outcome, flavor, perPlayerLoot` | Encounter ended; loot distributed |
+
+### P2P DataChannel — Targeted (`sendToPeer`)
+
+| Event (`t`) | Direction | Key Fields | Description |
+|---|---|---|---|
+| `dm:whisper` | DM → player | `text` | Private DM message |
+| `trade:item` | player → player | `item, fromUsername` | Item trade (DM CC'd) |
+| `round:submit-action` | player → DM | `action` | Player submits their action text |
+| `round:submit-roll` | player → DM | `roll` | Player submits their d20 roll |
+| `round:action:assigned` | DM → player | `stat, dc` | DM's check assignment sent to player |
+| `round:action:roll:accepted` | DM → player | `roll, result` | DM acks the roll result |
+| `encounter:prompt` | DM → player | `eid, npcName, npcRole, npcStats, options` | Player receives encounter card |
+| `encounter:decide` | player → DM | `eid, optionId, optionLabel` | Player submits their decision |
+| `encounter:roll` | player → DM | `eid, roll` | Player submits their d20 roll |
+| `encounter:decision:ack` | DM → player | `eid, stat, dc` | DM acks decision, sends check info |
+| `encounter:roll:ack` | DM → player | `eid, roll, outcome` | DM acks roll with outcome |
+| `encounter:ready` | DM → player | `eid` | All players resolved; resolution imminent |
 
 ## localStorage Keys
 
