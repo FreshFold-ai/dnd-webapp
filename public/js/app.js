@@ -1378,6 +1378,49 @@ P2PMesh.on('encounter:roll', ({ eid, _from }) => {
   dmUpdateEncounterRosterPanel(eid);
 });
 
+// New consolidated player-driven flow: the player computes their stat check and
+// rolls locally, then sends a single `encounter:report` to the DM. The DM updates
+// the roster, echoes the action+roll into the chat feed, and signals readiness.
+P2PMesh.on('encounter:report', ({ eid, optionId, optionLabel, requiresRoll, statLabel, statValue, threshold, roll, total, success, _from }) => {
+  if (!isDM || !activeEncounter || activeEncounter.eid !== eid) return;
+  const entry = activeEncounter.roster.find(r => r.socketId === _from);
+  if (!entry) return;
+
+  const username = partyMembers[_from]?.username || _from.slice(0, 6);
+  const check = requiresRoll ? { stat: null, statLabel, statValue, threshold, requiresRoll: true } : { requiresRoll: false };
+
+  // Idempotent: only set decision once
+  if (!entry.decision) {
+    entry.decision = { optionId, optionLabel, check };
+    entry.check = check;
+  }
+
+  if (requiresRoll) {
+    entry.roll = roll;
+    entry.total = total;
+    entry.success = success;
+    const bonus = Number(statValue) >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+    addMessage(
+      `\ud83c\udfb2 ${username} \u2192 "${optionLabel}": d20 ${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} \u2014 ${success ? 'SUCCESS \u2713' : 'FAILURE \u2717'}`,
+      'system'
+    );
+  } else {
+    addMessage(`\ud83d\udcdc ${username} \u2192 "${optionLabel}" (no roll required)`, 'system');
+  }
+
+  const allReady = activeEncounter.roster.every(r => {
+    if (!r.decision) return false;
+    return !r.check?.requiresRoll || r.roll !== null;
+  });
+  if (allReady) {
+    activeEncounter.targetSocketIds.forEach(sid => {
+      P2PMesh.sendToPeer(sid, { t: 'encounter:ready', eid, npcName: activeEncounter.resolvedName });
+    });
+  }
+
+  dmUpdateEncounterRosterPanel(eid);
+});
+
 function dmUpdateEncounterRosterPanel(eid) {
   if (!activeEncounter || activeEncounter.eid !== eid) return;
   const el = document.getElementById('dm-encounter-roster');
@@ -1937,9 +1980,28 @@ function dmForceResolve(eid, outcome) {
 
 // ─── Encounter: Player Prompt Card ───────────────────────────────────────────
 let activeEncounterEid = null;
+// Cache per-encounter context the player needs to compute checks locally.
+// { [eid]: { options, npcName, selectedOption, check } }
+const encounterContext = {};
+
+// Resolve a player's stat check for a chosen option using local character + inventory.
+function computeLocalEncounterCheck(opt) {
+  const STAT_KEY_MAP = { atk: 'might', spd: 'agility', might: 'might', agility: 'agility', endurance: 'endurance', intellect: 'intellect', intuition: 'intuition', presence: 'presence' };
+  const stat = STAT_KEY_MAP[opt.rollStat] || 'might';
+  const stats = (myCharacter && myCharacter.stats) || {};
+  const baseScore = Number(stats[stat] || 10);
+  const boosts = (typeof GameCatalog !== 'undefined' && GameCatalog.getInventoryEquipBoosts)
+    ? GameCatalog.getInventoryEquipBoosts(myInventory)
+    : {};
+  const bonus = Number(boosts[stat] || 0);
+  const statValue = Math.floor((baseScore - 10) / 2) + bonus;
+  const threshold = Math.max(8, 10 + (Number(opt.difficulty) || 0));
+  return { stat, statLabel: STAT_LABELS[stat] || stat, statValue, threshold };
+}
 
 P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmName, at }) => {
   activeEncounterEid = eid;
+  encounterContext[eid] = { options: options || [], npcName, selectedOption: null, check: null };
   // Hide the standalone round-action dice panel — encounters are resolved entirely
   // through the in-chat encounter card to avoid duplicate/competing UIs.
   if (dicePanelEl) dicePanelEl.classList.add('hidden');
@@ -1984,41 +2046,51 @@ P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNa
 
 function submitEncounterDecision(eid, optionId, optionLabel, reqRoll) {
   if (activeEncounterEid !== eid) return;
-  P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:decide', eid, optionId, optionLabel });
+  const ctx = encounterContext[eid];
+  const opt = ctx?.options.find(o => o.id === optionId) || { id: optionId, label: optionLabel, reqRoll, rollStat: 'might', difficulty: 0 };
+  if (ctx) ctx.selectedOption = opt;
+
   // Disable decision buttons
   const card = document.getElementById(`encounter-card-${eid}`);
   if (card) card.querySelectorAll('.encounter-btn').forEach(b => b.disabled = true);
-  // Immediately reveal roll section if this option needs a check (DM ack will fill in stat details)
+
+  const res = document.getElementById(`enc-result-${eid}`);
+
   if (reqRoll) {
+    // Compute the stat check entirely locally and reveal the roll UI immediately.
+    const check = computeLocalEncounterCheck(opt);
+    if (ctx) ctx.check = check;
     const rollSection = document.getElementById(`enc-roll-${eid}`);
     if (rollSection) rollSection.style.display = 'block';
-    const res = document.getElementById(`enc-result-${eid}`);
-    if (res) res.textContent = `Choice locked: ${optionLabel}. Waiting for DM to assign stat check…`;
-  }
-}
-
-P2PMesh.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, resolutionText }) => {
-  const res = document.getElementById(`enc-result-${eid}`);
-  const rollSection = document.getElementById(`enc-roll-${eid}`);
-  const rollButton = rollSection ? rollSection.querySelector('button') : null;
-  if (needsRoll) {
-    if (rollSection) rollSection.style.display = 'block';
-    if (rollButton) rollButton.disabled = false;
+    const rollBtn = document.getElementById(`enc-roll-btn-${eid}`);
+    if (rollBtn) rollBtn.disabled = false;
     if (res) {
       res.textContent = `Choice locked: ${optionLabel}. Roll d20 + ${check.statLabel} (${formatActionStatValue(check.statValue)}) vs ${check.threshold}.`;
     }
   } else {
-    if (rollSection) rollSection.style.display = 'none';
+    // No roll required \u2014 send the report immediately so it shows up in the DM chat feed.
     if (res) {
-      res.textContent = `Choice locked: ${optionLabel}. ${resolutionText || 'No roll required.'} Resolution happens when the DM advances the round.`;
+      res.textContent = `Choice locked: ${optionLabel}. No roll required. Resolution happens when the DM advances the round.`;
+    }
+    if (dmSocketId) {
+      P2PMesh.sendToPeer(dmSocketId, {
+        t: 'encounter:report',
+        eid,
+        optionId: opt.id,
+        optionLabel: opt.label,
+        requiresRoll: false,
+      });
     }
   }
-});
+}
 
 // Per-encounter dice animation interval map
 const encRollIntervals = {};
 
 function submitEncounterRoll(eid) {
+  const ctx = encounterContext[eid];
+  if (!ctx || !ctx.selectedOption || !ctx.check) return;
+
   const faceEl = document.getElementById(`enc-dice-face-${eid}`);
   const btnEl  = document.getElementById(`enc-roll-btn-${eid}`);
   const infoEl = document.getElementById(`enc-roll-info-${eid}`);
@@ -2037,27 +2109,39 @@ function submitEncounterRoll(eid) {
     }, 80);
   }
 
-  // DM generates the authoritative roll
-  P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:roll', eid });
-}
+  // Roll locally (player owns their roll), then settle the animation after a short
+  // visual delay and report the consolidated result to the DM.
+  const roll = Math.floor(Math.random() * 20) + 1;
+  const { statLabel, statValue, threshold } = ctx.check;
+  const total = roll + statValue;
+  const success = total >= threshold;
 
-P2PMesh.on('encounter:roll:ack', ({ eid, roll, statLabel, statValue, threshold, total, success }) => {
-  // Settle dice animation
-  if (encRollIntervals[eid]) { clearInterval(encRollIntervals[eid]); delete encRollIntervals[eid]; }
-  const faceEl = document.getElementById(`enc-dice-face-${eid}`);
-  if (faceEl) {
-    faceEl.textContent = String(roll);
-    faceEl.classList.remove('dice-face--rolling');
-    const wrapper = faceEl.closest('.dice-face-wrapper');
-    if (wrapper) wrapper.classList.remove('rolling');
-  }
-  const infoEl = document.getElementById(`enc-roll-info-${eid}`);
-  const bonus = Number(statValue) >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
-  const resultText = `${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} — ${success ? 'SUCCESS ✓' : 'FAILURE ✗'}`;
-  if (infoEl) infoEl.textContent = resultText;
-  const res = document.getElementById(`enc-result-${eid}`);
-  if (res) res.textContent = `Roll locked. ${resultText}. Waiting for DM to resolve the encounter.`;
-});
+  setTimeout(() => {
+    if (encRollIntervals[eid]) { clearInterval(encRollIntervals[eid]); delete encRollIntervals[eid]; }
+    if (faceEl) {
+      faceEl.textContent = String(roll);
+      faceEl.classList.remove('dice-face--rolling');
+      const wrapper = faceEl.closest('.dice-face-wrapper');
+      if (wrapper) wrapper.classList.remove('rolling');
+    }
+    const bonus = statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+    const resultText = `${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} \u2014 ${success ? 'SUCCESS \u2713' : 'FAILURE \u2717'}`;
+    if (infoEl) infoEl.textContent = resultText;
+    const res = document.getElementById(`enc-result-${eid}`);
+    if (res) res.textContent = `Roll locked. ${resultText}. Waiting for DM to resolve the encounter.`;
+
+    if (dmSocketId) {
+      P2PMesh.sendToPeer(dmSocketId, {
+        t: 'encounter:report',
+        eid,
+        optionId: ctx.selectedOption.id,
+        optionLabel: ctx.selectedOption.label,
+        requiresRoll: true,
+        statLabel, statValue, threshold, roll, total, success,
+      });
+    }
+  }, 700);
+}
 
 P2PMesh.on('encounter:ready', ({ eid, npcName }) => {
   const res = document.getElementById(`enc-result-${eid}`);
@@ -2075,6 +2159,7 @@ P2PMesh.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot,
   if (dmPanel) dmPanel.remove();
 
   activeEncounterEid = null;
+  delete encounterContext[eid];
 
   // Restore the standalone round-action dice panel for non-DM players (it was
   // hidden while the encounter prompt card was active).
