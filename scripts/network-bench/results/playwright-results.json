@@ -1,0 +1,2159 @@
+{
+  "target": "https://dnd-webapp-9fs4.onrender.com",
+  "timestamp": "2026-04-27T21:57:45.455Z",
+  "roomId": "golden-grove-6002",
+  "phaseTimings": [
+    {
+      "name": "pageload_DM",
+      "ms": 1799.17
+    },
+    {
+      "name": "pageload_Player1",
+      "ms": 2125.75
+    },
+    {
+      "name": "pageload_Player2",
+      "ms": 2115.23
+    },
+    {
+      "name": "after_pageloads",
+      "ms": 2128.12
+    },
+    {
+      "name": "dm_room_started",
+      "ms": 2391.74
+    },
+    {
+      "name": "p1_joined",
+      "ms": 2915.22
+    },
+    {
+      "name": "p2_joined",
+      "ms": 3210.23
+    },
+    {
+      "name": "mesh_connected",
+      "ms": 3391.46
+    },
+    {
+      "name": "npc_spawned",
+      "ms": 5462.28
+    },
+    {
+      "name": "round_1_advanced",
+      "ms": 7133.64
+    },
+    {
+      "name": "round_2_advanced",
+      "ms": 8877.96
+    },
+    {
+      "name": "round_3_advanced",
+      "ms": 10528.91
+    },
+    {
+      "name": "round_4_advanced",
+      "ms": 12177.99
+    },
+    {
+      "name": "round_5_advanced",
+      "ms": 13844.35
+    },
+    {
+      "name": "round_6_advanced",
+      "ms": 15477.79
+    },
+    {
+      "name": "encounter_done",
+      "ms": 15478.72
+    }
+  ],
+  "samples": [
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1515,
+          "bytesRecv": 1547,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 123,
+          "dcBytesRecv": 343,
+          "rttMs": null,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327051103,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1547,
+          "bytesRecv": 1515,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 123,
+          "rttMs": null,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327051124,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "new",
+          "iceConnectionState": "new",
+          "bytesSent": 0,
+          "bytesRecv": 0,
+          "packetsSent": 0,
+          "packetsRecv": 0,
+          "messagesSent": 0,
+          "messagesRecv": 0,
+          "dcBytesSent": 0,
+          "dcBytesRecv": 0,
+          "rttMs": null,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "new",
+          "iceConnectionState": "new",
+          "bytesSent": 0,
+          "bytesRecv": 0,
+          "packetsSent": 0,
+          "packetsRecv": 0,
+          "messagesSent": 0,
+          "messagesRecv": 0,
+          "dcBytesSent": 0,
+          "dcBytesRecv": 0,
+          "rttMs": null,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327051156,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1515,
+          "bytesRecv": 1547,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 123,
+          "dcBytesRecv": 343,
+          "rttMs": 7,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1481,
+          "bytesRecv": 1541,
+          "packetsSent": 10,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 123,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327052100,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1547,
+          "bytesRecv": 1515,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 123,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327052103,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1541,
+          "bytesRecv": 1481,
+          "packetsSent": 10,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 123,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327052106,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1515,
+          "bytesRecv": 1547,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 123,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1481,
+          "bytesRecv": 1541,
+          "packetsSent": 10,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 123,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327053101,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1547,
+          "bytesRecv": 1515,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 123,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 2,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327053103,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1541,
+          "bytesRecv": 1481,
+          "packetsSent": 10,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 123,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327053107,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2865,
+          "bytesRecv": 1647,
+          "packetsSent": 14,
+          "packetsRecv": 12,
+          "messagesSent": 4,
+          "messagesRecv": 1,
+          "dcBytesSent": 1317,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2831,
+          "bytesRecv": 1641,
+          "packetsSent": 13,
+          "packetsRecv": 12,
+          "messagesSent": 4,
+          "messagesRecv": 1,
+          "dcBytesSent": 1317,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327054101,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1647,
+          "bytesRecv": 2865,
+          "packetsSent": 12,
+          "packetsRecv": 14,
+          "messagesSent": 1,
+          "messagesRecv": 4,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 1317,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327054103,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1641,
+          "bytesRecv": 2831,
+          "packetsSent": 12,
+          "packetsRecv": 13,
+          "messagesSent": 1,
+          "messagesRecv": 4,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 1317,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327054108,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 4213,
+          "bytesRecv": 1747,
+          "packetsSent": 18,
+          "packetsRecv": 14,
+          "messagesSent": 8,
+          "messagesRecv": 1,
+          "dcBytesSent": 2458,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 4179,
+          "bytesRecv": 1741,
+          "packetsSent": 17,
+          "packetsRecv": 14,
+          "messagesSent": 8,
+          "messagesRecv": 1,
+          "dcBytesSent": 2458,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327055101,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1747,
+          "bytesRecv": 4213,
+          "packetsSent": 14,
+          "packetsRecv": 18,
+          "messagesSent": 1,
+          "messagesRecv": 8,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 2458,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327055127,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1741,
+          "bytesRecv": 4179,
+          "packetsSent": 14,
+          "packetsRecv": 17,
+          "messagesSent": 1,
+          "messagesRecv": 8,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 2458,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327055158,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 4213,
+          "bytesRecv": 1747,
+          "packetsSent": 18,
+          "packetsRecv": 14,
+          "messagesSent": 8,
+          "messagesRecv": 1,
+          "dcBytesSent": 2458,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 4179,
+          "bytesRecv": 1741,
+          "packetsSent": 17,
+          "packetsRecv": 14,
+          "messagesSent": 8,
+          "messagesRecv": 1,
+          "dcBytesSent": 2458,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327056108,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1747,
+          "bytesRecv": 4213,
+          "packetsSent": 14,
+          "packetsRecv": 18,
+          "messagesSent": 1,
+          "messagesRecv": 8,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 2458,
+          "rttMs": 11,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327056112,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1741,
+          "bytesRecv": 4179,
+          "packetsSent": 14,
+          "packetsRecv": 17,
+          "messagesSent": 1,
+          "messagesRecv": 8,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 2458,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327056132,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 5561,
+          "bytesRecv": 1847,
+          "packetsSent": 22,
+          "packetsRecv": 16,
+          "messagesSent": 12,
+          "messagesRecv": 1,
+          "dcBytesSent": 3597,
+          "dcBytesRecv": 343,
+          "rttMs": 3,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 5527,
+          "bytesRecv": 1841,
+          "packetsSent": 21,
+          "packetsRecv": 16,
+          "messagesSent": 12,
+          "messagesRecv": 1,
+          "dcBytesSent": 3597,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327057101,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1847,
+          "bytesRecv": 5561,
+          "packetsSent": 16,
+          "packetsRecv": 22,
+          "messagesSent": 1,
+          "messagesRecv": 12,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 3597,
+          "rttMs": 11,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327057103,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1841,
+          "bytesRecv": 5527,
+          "packetsSent": 16,
+          "packetsRecv": 21,
+          "messagesSent": 1,
+          "messagesRecv": 12,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 3597,
+          "rttMs": 5,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327057108,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 5561,
+          "bytesRecv": 1847,
+          "packetsSent": 22,
+          "packetsRecv": 16,
+          "messagesSent": 12,
+          "messagesRecv": 1,
+          "dcBytesSent": 3597,
+          "dcBytesRecv": 343,
+          "rttMs": 3,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 5527,
+          "bytesRecv": 1841,
+          "packetsSent": 21,
+          "packetsRecv": 16,
+          "messagesSent": 12,
+          "messagesRecv": 1,
+          "dcBytesSent": 3597,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327058102,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1847,
+          "bytesRecv": 5561,
+          "packetsSent": 16,
+          "packetsRecv": 22,
+          "messagesSent": 1,
+          "messagesRecv": 12,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 3597,
+          "rttMs": 11,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327058104,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1841,
+          "bytesRecv": 5527,
+          "packetsSent": 16,
+          "packetsRecv": 21,
+          "messagesSent": 1,
+          "messagesRecv": 12,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 3597,
+          "rttMs": 5,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327058107,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 6909,
+          "bytesRecv": 1947,
+          "packetsSent": 26,
+          "packetsRecv": 18,
+          "messagesSent": 16,
+          "messagesRecv": 1,
+          "dcBytesSent": 4738,
+          "dcBytesRecv": 343,
+          "rttMs": 2,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 6875,
+          "bytesRecv": 1941,
+          "packetsSent": 25,
+          "packetsRecv": 18,
+          "messagesSent": 16,
+          "messagesRecv": 1,
+          "dcBytesSent": 4738,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327059109,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1947,
+          "bytesRecv": 6909,
+          "packetsSent": 18,
+          "packetsRecv": 26,
+          "messagesSent": 1,
+          "messagesRecv": 16,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 4738,
+          "rttMs": 6,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327059120,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1941,
+          "bytesRecv": 6875,
+          "packetsSent": 18,
+          "packetsRecv": 25,
+          "messagesSent": 1,
+          "messagesRecv": 16,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 4738,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327059127,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 6909,
+          "bytesRecv": 1947,
+          "packetsSent": 26,
+          "packetsRecv": 18,
+          "messagesSent": 16,
+          "messagesRecv": 1,
+          "dcBytesSent": 4738,
+          "dcBytesRecv": 343,
+          "rttMs": 2,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 6875,
+          "bytesRecv": 1941,
+          "packetsSent": 25,
+          "packetsRecv": 18,
+          "messagesSent": 16,
+          "messagesRecv": 1,
+          "dcBytesSent": 4738,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327060102,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1947,
+          "bytesRecv": 6909,
+          "packetsSent": 18,
+          "packetsRecv": 26,
+          "messagesSent": 1,
+          "messagesRecv": 16,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 4738,
+          "rttMs": 6,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327060105,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1941,
+          "bytesRecv": 6875,
+          "packetsSent": 18,
+          "packetsRecv": 25,
+          "messagesSent": 1,
+          "messagesRecv": 16,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 4738,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327060108,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 8257,
+          "bytesRecv": 2047,
+          "packetsSent": 30,
+          "packetsRecv": 20,
+          "messagesSent": 20,
+          "messagesRecv": 1,
+          "dcBytesSent": 5879,
+          "dcBytesRecv": 343,
+          "rttMs": 2,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 8223,
+          "bytesRecv": 2041,
+          "packetsSent": 29,
+          "packetsRecv": 20,
+          "messagesSent": 20,
+          "messagesRecv": 1,
+          "dcBytesSent": 5879,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327061102,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2047,
+          "bytesRecv": 8257,
+          "packetsSent": 20,
+          "packetsRecv": 30,
+          "messagesSent": 1,
+          "messagesRecv": 20,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 5879,
+          "rttMs": 6,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327061105,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2041,
+          "bytesRecv": 8223,
+          "packetsSent": 20,
+          "packetsRecv": 29,
+          "messagesSent": 1,
+          "messagesRecv": 20,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 5879,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 4,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327061108,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 9605,
+          "bytesRecv": 2147,
+          "packetsSent": 34,
+          "packetsRecv": 22,
+          "messagesSent": 24,
+          "messagesRecv": 1,
+          "dcBytesSent": 7018,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 9571,
+          "bytesRecv": 2141,
+          "packetsSent": 33,
+          "packetsRecv": 22,
+          "messagesSent": 24,
+          "messagesRecv": 1,
+          "dcBytesSent": 7018,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327062103,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2147,
+          "bytesRecv": 9605,
+          "packetsSent": 22,
+          "packetsRecv": 34,
+          "messagesSent": 1,
+          "messagesRecv": 24,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 7018,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327062107,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2141,
+          "bytesRecv": 9571,
+          "packetsSent": 22,
+          "packetsRecv": 33,
+          "messagesSent": 1,
+          "messagesRecv": 24,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 7018,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327062109,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 9605,
+          "bytesRecv": 2147,
+          "packetsSent": 34,
+          "packetsRecv": 22,
+          "messagesSent": 24,
+          "messagesRecv": 1,
+          "dcBytesSent": 7018,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 9571,
+          "bytesRecv": 2141,
+          "packetsSent": 33,
+          "packetsRecv": 22,
+          "messagesSent": 24,
+          "messagesRecv": 1,
+          "dcBytesSent": 7018,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327063104,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2147,
+          "bytesRecv": 9605,
+          "packetsSent": 22,
+          "packetsRecv": 34,
+          "messagesSent": 1,
+          "messagesRecv": 24,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 7018,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327063108,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2141,
+          "bytesRecv": 9571,
+          "packetsSent": 22,
+          "packetsRecv": 33,
+          "messagesSent": 1,
+          "messagesRecv": 24,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 7018,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327063111,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 10953,
+          "bytesRecv": 2247,
+          "packetsSent": 38,
+          "packetsRecv": 24,
+          "messagesSent": 28,
+          "messagesRecv": 1,
+          "dcBytesSent": 8159,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 10919,
+          "bytesRecv": 2241,
+          "packetsSent": 37,
+          "packetsRecv": 24,
+          "messagesSent": 28,
+          "messagesRecv": 1,
+          "dcBytesSent": 8159,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327064105,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2247,
+          "bytesRecv": 10953,
+          "packetsSent": 24,
+          "packetsRecv": 38,
+          "messagesSent": 1,
+          "messagesRecv": 28,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 8159,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327064107,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2241,
+          "bytesRecv": 10919,
+          "packetsSent": 24,
+          "packetsRecv": 37,
+          "messagesSent": 1,
+          "messagesRecv": 28,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 8159,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327064109,
+      "peer": "Player2"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 10953,
+          "bytesRecv": 2247,
+          "packetsSent": 38,
+          "packetsRecv": 24,
+          "messagesSent": 28,
+          "messagesRecv": 1,
+          "dcBytesSent": 8159,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 10919,
+          "bytesRecv": 2241,
+          "packetsSent": 37,
+          "packetsRecv": 24,
+          "messagesSent": 28,
+          "messagesRecv": 1,
+          "dcBytesSent": 8159,
+          "dcBytesRecv": 339,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327065105,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2247,
+          "bytesRecv": 10953,
+          "packetsSent": 24,
+          "packetsRecv": 38,
+          "messagesSent": 1,
+          "messagesRecv": 28,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 8159,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327065107,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2241,
+          "bytesRecv": 10919,
+          "packetsSent": 24,
+          "packetsRecv": 37,
+          "messagesSent": 1,
+          "messagesRecv": 28,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 8159,
+          "rttMs": 8,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327065109,
+      "peer": "Player2"
+    }
+  ],
+  "finalStats": [
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 10953,
+          "bytesRecv": 2247,
+          "packetsSent": 38,
+          "packetsRecv": 24,
+          "messagesSent": 28,
+          "messagesRecv": 1,
+          "dcBytesSent": 8159,
+          "dcBytesRecv": 343,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 10919,
+          "bytesRecv": 2241,
+          "packetsSent": 37,
+          "packetsRecv": 24,
+          "messagesSent": 28,
+          "messagesRecv": 1,
+          "dcBytesSent": 8159,
+          "dcBytesRecv": 339,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327065449,
+      "peer": "DM"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2247,
+          "bytesRecv": 10953,
+          "packetsSent": 24,
+          "packetsRecv": 38,
+          "messagesSent": 1,
+          "messagesRecv": 28,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 8159,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1734,
+          "bytesRecv": 1543,
+          "packetsSent": 11,
+          "packetsRecv": 10,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 343,
+          "dcBytesRecv": 339,
+          "rttMs": 1,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327065451,
+      "peer": "Player1"
+    },
+    {
+      "sio": {
+        "sent": 0,
+        "recv": 0,
+        "sentBytes": 0,
+        "recvBytes": 0,
+        "events": {
+          "sent": {},
+          "recv": {}
+        }
+      },
+      "pcs": [
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 2241,
+          "bytesRecv": 10919,
+          "packetsSent": 24,
+          "packetsRecv": 37,
+          "messagesSent": 1,
+          "messagesRecv": 28,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 8159,
+          "rttMs": 8,
+          "availableOutgoingBitrate": null
+        },
+        {
+          "connectionState": "connected",
+          "iceConnectionState": "connected",
+          "bytesSent": 1543,
+          "bytesRecv": 1734,
+          "packetsSent": 10,
+          "packetsRecv": 11,
+          "messagesSent": 1,
+          "messagesRecv": 1,
+          "dcBytesSent": 339,
+          "dcBytesRecv": 343,
+          "rttMs": 0,
+          "availableOutgoingBitrate": null
+        }
+      ],
+      "at": 1777327065453,
+      "peer": "Player2"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+Real-browser benchmark — https://dnd-webapp-9fs4.onrender.com
+Run at: 2026-04-27T21:57:45.455Z
+Room: golden-grove-6002
+
+End-to-end timing:
+  - Page load (slowest of 3): 2126 ms
+  - Mesh connected (after both joins): 3391 ms total elapsed
+  - Mean per-round wall-clock: 1669 ms over 6 rounds
+
+WebRTC peer-to-peer payload (the actual gameplay traffic):
+  - Total data-channel messages across all peers: 120
+  - Total data-channel bytes across all peers:    35364 (34.5 KB)
+  - Per-peer messages sent: {'DM': 56, 'Player1': 2, 'Player2': 2}
+  - Per-peer messages recv: {'DM': 2, 'Player1': 29, 'Player2': 29}
+  - DM is the broadcast hub: it sends ~10x more bytes than it receives (authoritative model).
+
+WebRTC RTT (candidate-pair, sampled every 1s):
+  - n=42 samples · mean=1.98 ms · max=6.00 ms
+  - (Both peers ran on the same machine, so RTT ≈ 0–1 ms; in production this is dominated by player-to-player internet RTT, NOT the Render server.)

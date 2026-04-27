@@ -1,0 +1,299 @@
+{
+  "target": "https://dnd-webapp-9fs4.onrender.com",
+  "timestamp": "2026-04-27T21:47:41.427Z",
+  "http": [
+    {
+      "url": "https://dnd-webapp-9fs4.onrender.com/",
+      "status": 200,
+      "ttfbMs": 200.91,
+      "totalMs": 204.31,
+      "bytes": 18094
+    },
+    {
+      "url": "https://dnd-webapp-9fs4.onrender.com/js/app.js",
+      "status": 200,
+      "ttfbMs": 108.86,
+      "totalMs": 116.03,
+      "bytes": 104035
+    },
+    {
+      "url": "https://dnd-webapp-9fs4.onrender.com/js/p2pMesh.js",
+      "status": 200,
+      "ttfbMs": 105.79,
+      "totalMs": 105.99,
+      "bytes": 7569
+    },
+    {
+      "url": "https://dnd-webapp-9fs4.onrender.com/js/catalog.js",
+      "status": 200,
+      "ttfbMs": 134.13,
+      "totalMs": 134.5,
+      "bytes": 27871
+    },
+    {
+      "url": "https://dnd-webapp-9fs4.onrender.com/css/styles.css",
+      "status": 200,
+      "ttfbMs": 256.2,
+      "totalMs": 256.59,
+      "bytes": 26347
+    },
+    {
+      "url": "https://dnd-webapp-9fs4.onrender.com/socket.io/socket.io.js",
+      "status": 200,
+      "ttfbMs": 112.57,
+      "totalMs": 184.37,
+      "bytes": 155836
+    }
+  ],
+  "scenario": {
+    "roomId": "storm-hollow-8476",
+    "phaseTimings": [
+      {
+        "label": "connect_dm",
+        "ms": 419.93
+      },
+      {
+        "label": "connect_p1",
+        "ms": 426.5
+      },
+      {
+        "label": "connect_p2",
+        "ms": 417.89
+      },
+      {
+        "label": "room_create",
+        "ms": 89.91,
+        "value": {
+          "roomId": "storm-hollow-8476",
+          "socketId": "ypVi-PTs8I2xuQnSAAAL",
+          "isDM": true,
+          "roomMeta": {
+            "roomType": "BenchRoom",
+            "dmName": "BenchDM"
+          },
+          "peers": []
+        }
+      },
+      {
+        "label": "p1_join",
+        "ms": 99.45,
+        "value": {
+          "roomId": "storm-hollow-8476",
+          "socketId": "-oBIHt_ciTDaR84_AAAN",
+          "isDM": false,
+          "roomMeta": {
+            "roomType": "BenchRoom",
+            "dmName": "BenchDM"
+          },
+          "peers": [
+            "ypVi-PTs8I2xuQnSAAAL"
+          ]
+        }
+      },
+      {
+        "label": "p2_join",
+        "ms": 92.83,
+        "value": {
+          "roomId": "storm-hollow-8476",
+          "socketId": "4PDHMMJjDqwi5-LQAAAM",
+          "isDM": false,
+          "roomMeta": {
+            "roomType": "BenchRoom",
+            "dmName": "BenchDM"
+          },
+          "peers": [
+            "ypVi-PTs8I2xuQnSAAAL",
+            "-oBIHt_ciTDaR84_AAAN"
+          ]
+        }
+      }
+    ],
+    "signalingRtts": [
+      {
+        "pair": "DM↔P1",
+        "iter": 0,
+        "offer": 88.3,
+        "answer": 101.27,
+        "ice_a_to_b": 90.15,
+        "ice_b_to_a": 99.91
+      },
+      {
+        "pair": "DM↔P1",
+        "iter": 1,
+        "offer": 87.23,
+        "answer": 98.75,
+        "ice_a_to_b": 87.24,
+        "ice_b_to_a": 99.08
+      },
+      {
+        "pair": "DM↔P1",
+        "iter": 2,
+        "offer": 88.4,
+        "answer": 97.62,
+        "ice_a_to_b": 92.41,
+        "ice_b_to_a": 97.31
+      },
+      {
+        "pair": "DM↔P1",
+        "iter": 3,
+        "offer": 87.36,
+        "answer": 103.97,
+        "ice_a_to_b": 88.97,
+        "ice_b_to_a": 97.63
+      },
+      {
+        "pair": "DM↔P1",
+        "iter": 4,
+        "offer": 89.39,
+        "answer": 98.4,
+        "ice_a_to_b": 88.01,
+        "ice_b_to_a": 98.31
+      },
+      {
+        "pair": "DM↔P2",
+        "iter": 0,
+        "offer": 88.53,
+        "answer": 92.51,
+        "ice_a_to_b": 87.03,
+        "ice_b_to_a": 91.57
+      },
+      {
+        "pair": "DM↔P2",
+        "iter": 1,
+        "offer": 87.94,
+        "answer": 91.26,
+        "ice_a_to_b": 89.19,
+        "ice_b_to_a": 93.04
+      },
+      {
+        "pair": "DM↔P2",
+        "iter": 2,
+        "offer": 87.78,
+        "answer": 92.83,
+        "ice_a_to_b": 87.63,
+        "ice_b_to_a": 94.21
+      },
+      {
+        "pair": "DM↔P2",
+        "iter": 3,
+        "offer": 86.79,
+        "answer": 91.28,
+        "ice_a_to_b": 87.73,
+        "ice_b_to_a": 90.97
+      },
+      {
+        "pair": "DM↔P2",
+        "iter": 4,
+        "offer": 89.39,
+        "answer": 90.75,
+        "ice_a_to_b": 87.54,
+        "ice_b_to_a": 91.65
+      },
+      {
+        "pair": "P1↔P2",
+        "iter": 0,
+        "offer": 99.06,
+        "answer": 91.55,
+        "ice_a_to_b": 97.16,
+        "ice_b_to_a": 94.99
+      },
+      {
+        "pair": "P1↔P2",
+        "iter": 1,
+        "offer": 98.59,
+        "answer": 91.65,
+        "ice_a_to_b": 97.22,
+        "ice_b_to_a": 91.11
+      },
+      {
+        "pair": "P1↔P2",
+        "iter": 2,
+        "offer": 98.84,
+        "answer": 91.8,
+        "ice_a_to_b": 97.8,
+        "ice_b_to_a": 95.79
+      },
+      {
+        "pair": "P1↔P2",
+        "iter": 3,
+        "offer": 97.75,
+        "answer": 96.23,
+        "ice_a_to_b": 97.21,
+        "ice_b_to_a": 92.02
+      },
+      {
+        "pair": "P1↔P2",
+        "iter": 4,
+        "offer": 99.09,
+        "answer": 90.81,
+        "ice_a_to_b": 101.59,
+        "ice_b_to_a": 91.44
+      }
+    ],
+    "perPeer": {
+      "DM": {
+        "label": "DM",
+        "packetsSent": 21,
+        "packetsRecv": 23,
+        "bytesSent": 4118,
+        "bytesRecv": 4424,
+        "eventsSent": {
+          "room:start": 1,
+          "webrtc:offer": 10,
+          "webrtc:ice-candidate": 10
+        },
+        "eventsRecv": {
+          "room:joined": 1,
+          "peer:joined": 2,
+          "webrtc:answer": 10,
+          "webrtc:ice-candidate": 10
+        }
+      },
+      "Player1": {
+        "label": "Player1",
+        "packetsSent": 21,
+        "packetsRecv": 22,
+        "bytesSent": 4184,
+        "bytesRecv": 4312,
+        "eventsSent": {
+          "room:join": 1,
+          "webrtc:answer": 5,
+          "webrtc:ice-candidate": 10,
+          "webrtc:offer": 5
+        },
+        "eventsRecv": {
+          "room:joined": 1,
+          "peer:joined": 1,
+          "webrtc:offer": 5,
+          "webrtc:ice-candidate": 10,
+          "webrtc:answer": 5
+        }
+      },
+      "Player2": {
+        "label": "Player2",
+        "packetsSent": 21,
+        "packetsRecv": 21,
+        "bytesSent": 4195,
+        "bytesRecv": 4204,
+        "eventsSent": {
+          "room:join": 1,
+          "webrtc:answer": 10,
+          "webrtc:ice-candidate": 10
+        },
+        "eventsRecv": {
+          "room:joined": 1,
+          "webrtc:offer": 10,
+          "webrtc:ice-candidate": 10
+        }
+      }
+    }
+  },
+  "rttSummary": {
+    "samples": 60,
+    "min": 86.79,
+    "mean": 93.18,
+    "p50": 91.8,
+    "p95": 101.27,
+    "max": 103.97
+  }
+}

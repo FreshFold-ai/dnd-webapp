@@ -1,0 +1,18 @@
+Network Benchmark — https://dnd-webapp-9fs4.onrender.com
+Run at: 2026-04-27T21:47:41.427Z
+
+HTTP cold-load (initial page + critical assets):
+  - Total payload: 331.8 KB across 6 requests
+  - Slowest TTFB: 256 ms
+
+Signaling lifecycle (1 DM + 2 Players):
+  - WebSocket connect (mean): 421.4 ms
+  - room:start  -> room:joined: 89.9 ms
+  - room:join   -> room:joined: 96.1 ms (mean of 2 players)
+
+WebRTC signaling RTT (server relay, 60 samples across 3 pairs):
+  - min/mean/p50/p95/max: 86.8 / 93.2 / 91.8 / 101.3 / 104.0 ms
+
+Aggregate Socket.IO traffic across all 3 peers:
+  - Total packets: 129
+  - Total bytes:   25437 (24.8 KB)
