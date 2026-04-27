@@ -1221,6 +1221,33 @@ function dmAdvanceRound() {
   if (phaseDisplay) phaseDisplay.textContent = 'Action Phase';
   if (turnDisplay) turnDisplay.textContent = 'No active adventurer';
   updateRoundActionUI();
+
+  // Aggro NPC counter-attacks: each living aggro NPC strikes a random alive
+  // player at the end of every round. Damage = 1d4 + max(0, str_mod), min 1.
+  Object.entries(activeAggroNpcs).forEach(([eid, npc]) => {
+    if (npc.hp <= 0) return;
+    const candidates = (npc.targetSocketIds || []).filter(sid =>
+      partyMembers[sid] && !partyMembers[sid].isDM && dmGetPlayerCurrentHp(sid) > 0
+    );
+    if (candidates.length === 0) return;
+    const targetSid = candidates[Math.floor(Math.random() * candidates.length)];
+    const strMod = Math.max(0, Math.floor((npc.str - 10) / 2));
+    const dmg = Math.max(1, Math.floor(Math.random() * 4) + 1 + strMod);
+    const before = dmGetPlayerCurrentHp(targetSid);
+    const after = Math.max(0, before - dmg);
+    playerCurrentHp[targetSid] = after;
+    const targetUsername = partyMembers[targetSid]?.username || targetSid.slice(0, 6);
+    addMessage(`\u2694\ufe0f ${npc.name} attacks ${targetUsername} for ${dmg} damage (${after} HP).`, 'error');
+    P2PMesh.broadcast({
+      t: 'npc:attack',
+      eid,
+      npcName: npc.name,
+      targetSocketId: targetSid,
+      targetUsername,
+      damage: dmg,
+      remainingHp: after,
+    });
+  });
 }
 
 // ─── Trade Item ───────────────────────────────────────────────────────────────
@@ -1274,6 +1301,22 @@ function dmTriggerEnv() {
 
 // --- DM Encounter Engine ---
 let activeEncounter = null; // { eid, npc, targetSocketIds, roster, resolvedName, seed }
+// DM-side persistent aggro NPC registry: aggro encounters do NOT auto-resolve;
+// the NPC stays in this map until its HP hits zero or the DM force-resolves it.
+// Each round, every entry attacks a random alive player.
+// Map<eid, { name, hp, maxHp, str, dex, ac, role, targetSocketIds }>
+const activeAggroNpcs = {};
+// DM-side mirror of player current HP (persists across rounds).
+// Map<socketId, currentHp>. Seeded from partyMembers[sid].character.hp.
+const playerCurrentHp = {};
+
+function dmGetPlayerCurrentHp(sid) {
+  if (typeof playerCurrentHp[sid] === 'number') return playerCurrentHp[sid];
+  const max = Number(partyMembers[sid]?.character?.hp || 20);
+  playerCurrentHp[sid] = max;
+  return max;
+}
+
 
 function dmPickTemplate(npcType, templateId) {
   const { NPC_TEMPLATES } = GameCatalog;
@@ -1307,6 +1350,20 @@ function dmStartEncounter({ npcType, templateId, npcName, target }) {
   }));
 
   activeEncounter = { eid, npc, targetSocketIds, roster, resolvedName, seed };
+
+  // Aggro NPCs persist across rounds and counter-attack until their HP hits 0.
+  if (npc.role === 'aggro') {
+    activeAggroNpcs[eid] = {
+      name: resolvedName,
+      hp: Number(npc.hp) || 10,
+      maxHp: Number(npc.hp) || 10,
+      str: Number(npc.str) || 10,
+      dex: Number(npc.dex) || 10,
+      ac: Number(npc.ac) || 10,
+      role: 'aggro',
+      targetSocketIds: targetSocketIds.slice(),
+    };
+  }
 
   // Save to encounter storage
   const enc = readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
@@ -1404,6 +1461,21 @@ P2PMesh.on('encounter:report', ({ eid, optionId, optionLabel, requiresRoll, stat
       `\ud83c\udfb2 ${username} \u2192 "${optionLabel}": d20 ${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} \u2014 ${success ? 'SUCCESS \u2713' : 'FAILURE \u2717'}`,
       'system'
     );
+
+    // Aggro NPC: a successful player roll deals damage = 1d6 + max(0, statValue).
+    // When the NPC's HP hits zero, the encounter resolves as 'death' immediately.
+    const aggro = activeAggroNpcs[eid];
+    if (aggro && success) {
+      const dmg = Math.max(1, Math.floor(Math.random() * 6) + 1 + Math.max(0, Number(statValue) || 0));
+      aggro.hp = Math.max(0, aggro.hp - dmg);
+      addMessage(`\ud83d\udca5 ${username} hits ${aggro.name} for ${dmg} (${aggro.hp}/${aggro.maxHp} HP).`, 'system');
+      P2PMesh.broadcast({ t: 'npc:hp', eid, npcName: aggro.name, hp: aggro.hp, maxHp: aggro.maxHp, lastDamage: dmg, attackerUsername: username });
+      if (aggro.hp <= 0) {
+        addMessage(`\u2620\ufe0f ${aggro.name} falls to ${username}'s attack.`, 'system');
+        // Defer slightly so the npc:hp broadcast lands before the resolution card.
+        setTimeout(() => dmResolveEncounter(eid, 'death'), 100);
+      }
+    }
   } else {
     addMessage(`\ud83d\udcdc ${username} \u2192 "${optionLabel}" (no roll required)`, 'system');
   }
@@ -1459,6 +1531,7 @@ function dmResolveEncounter(eid, outcome) {
   perPlayerLoot[socket.id] = GameCatalog.drawLoot(lootTable, seed ^ 0xff);
 
   activeEncounter = null;
+  delete activeAggroNpcs[eid];
 
   P2PMesh.broadcast({ t: 'encounter:resolved', eid, outcome, flavor, roster, perPlayerLoot, at });
 
@@ -2157,6 +2230,51 @@ P2PMesh.on('encounter:ready', ({ eid, npcName }) => {
     res.textContent = `${baseText}Encounter ready. Waiting for the DM to advance the round.`.trim();
   }
   addMessage(`[Encounter Ready] ${npcName} will resolve when the DM advances the round.`, 'system');
+});
+
+// ─── Aggro NPC: HP updates and counter-attacks ───────────────────────────────
+// Broadcast from DM whenever an aggro NPC takes damage from a player.
+P2PMesh.on('npc:hp', ({ eid, npcName, hp, maxHp, lastDamage, attackerUsername }) => {
+  // Update the encounter card stats line if present.
+  const card = document.getElementById(`encounter-card-${eid}`);
+  if (card) {
+    const statsLine = card.querySelector('.encounter-stats');
+    if (statsLine) {
+      // Append/refresh a small HP indicator.
+      let hpEl = statsLine.querySelector('.npc-hp-now');
+      if (!hpEl) {
+        hpEl = document.createElement('span');
+        hpEl.className = 'npc-hp-now';
+        hpEl.style.marginLeft = '0.5rem';
+        statsLine.appendChild(hpEl);
+      }
+      hpEl.textContent = ` | HP: ${hp}/${maxHp}`;
+    }
+  }
+  if (!isDM) {
+    addMessage(`💥 ${attackerUsername || 'Someone'} hit ${npcName} for ${lastDamage} (${hp}/${maxHp} HP).`, 'system');
+  }
+});
+
+// Broadcast from DM at the end of every round for each living aggro NPC.
+P2PMesh.on('npc:attack', ({ eid, npcName, targetSocketId, targetUsername, damage, remainingHp }) => {
+  // DM already echoed locally; skip the duplicate.
+  if (isDM) return;
+  if (targetSocketId === socket.id) {
+    // I am the target — apply damage to my local character HP and refresh UI.
+    if (myCharacter) {
+      const before = Number(myCharacter.hp || 0);
+      const after = Math.max(0, before - Number(damage || 0));
+      myCharacter.hp = after;
+      updateCharSummary();
+      addMessage(`⚔️ ${npcName} attacks YOU for ${damage} damage! (${after} HP)`, 'error');
+      if (after <= 0) {
+        addMessage(`💀 You have fallen.`, 'error');
+      }
+    }
+  } else {
+    addMessage(`⚔️ ${npcName} attacks ${targetUsername} for ${damage} damage. (${remainingHp} HP)`, 'system');
+  }
 });
 
 // ─── Encounter: Resolution ─────────────────────────────────────────────────────
