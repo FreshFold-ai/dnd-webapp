@@ -1940,6 +1940,9 @@ let activeEncounterEid = null;
 
 P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmName, at }) => {
   activeEncounterEid = eid;
+  // Hide the standalone round-action dice panel — encounters are resolved entirely
+  // through the in-chat encounter card to avoid duplicate/competing UIs.
+  if (dicePanelEl) dicePanelEl.classList.add('hidden');
   const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
   const msgBox = document.getElementById('message-feed');
   if (!msgBox) return;
@@ -2072,6 +2075,18 @@ P2PMesh.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot,
   if (dmPanel) dmPanel.remove();
 
   activeEncounterEid = null;
+
+  // Restore the standalone round-action dice panel for non-DM players (it was
+  // hidden while the encounter prompt card was active).
+  if (!isDM && dicePanelEl) {
+    dicePanelEl.classList.remove('hidden');
+    // Reset the panel back to the input phase so the next round starts clean.
+    if (diceInputPhase) diceInputPhase.classList.remove('hidden');
+    if (diceCheckPhase) diceCheckPhase.classList.add('hidden');
+    if (actionInput) actionInput.value = '';
+    if (actionSubmitBtn) actionSubmitBtn.disabled = false;
+    if (actionStatus) actionStatus.textContent = 'Describe one action to attempt this round.';
+  }
 
   // DM saves encounter lifecycle records in tab-scoped runtime storage.
   if (isDM) {
