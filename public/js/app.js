@@ -1669,6 +1669,7 @@ socket.on('room:count', ({ count }) => {
 });
 
 socket.on('server:error', ({ message }) => {
+  if (loadingScreen) loadingScreen.classList.add('hidden');
   displayError(message || 'An unknown server error occurred.');
 });
 
@@ -1678,6 +1679,7 @@ socket.on('connect_error', (error) => {
 });
 
 socket.on('disconnect', (reason) => {
+  if (loadingScreen) loadingScreen.classList.add('hidden');
   addMessage(`Disconnected from server: ${reason}`, 'error');
 });
 
