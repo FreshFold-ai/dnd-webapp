@@ -1588,7 +1588,7 @@ socket.on('room:joined', ({ roomId, socketId, isDM: joinedAsDM, roomMeta, peers 
   joinSection.classList.add('hidden');
   chatSection.classList.remove('hidden');
   if (isDM) {
-    diceSection.classList.add('hidden');
+    if (diceSection) diceSection.classList.add('hidden');
     if (actionSection) actionSection.classList.add('hidden');
     tradeSection.classList.add('hidden');
     if (avatarBox) avatarBox.classList.add('hidden');
@@ -1598,7 +1598,7 @@ socket.on('room:joined', ({ roomId, socketId, isDM: joinedAsDM, roomMeta, peers 
     if (dmSpawnSection) dmSpawnSection.classList.remove('hidden');
     if (dmEnvSection) dmEnvSection.classList.remove('hidden');
   } else {
-    diceSection.classList.remove('hidden');
+    if (diceSection) diceSection.classList.remove('hidden');
     if (actionSection) actionSection.classList.remove('hidden');
     tradeSection.classList.remove('hidden');
     if (avatarBox) avatarBox.classList.remove('hidden');
