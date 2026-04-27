@@ -1248,6 +1248,57 @@ function dmAdvanceRound() {
       remainingHp: after,
     });
   });
+
+  // Continue the encounter cycle: if an aggro encounter is still live and the
+  // NPC is alive, reset the roster and re-prompt all alive targeted players so
+  // they can act again on the new round. The cycle ends when the NPC dies
+  // (handled in encounter:report) or when the DM force-resolves the encounter.
+  dmRepromptActiveEncounter();
+}
+
+// Re-prompt all alive targeted players for the currently active aggro encounter
+// so the encounter cycle continues each round until the NPC is killed.
+function dmRepromptActiveEncounter() {
+  if (!isDM || !activeEncounter) return;
+  const { eid, npc, resolvedName, seed, targetSocketIds, roster } = activeEncounter;
+  const aggro = activeAggroNpcs[eid];
+  if (!aggro || aggro.hp <= 0) return; // only loop while a live aggro NPC exists
+
+  // Reset each roster row so a new round of decisions/rolls is required.
+  roster.forEach(r => {
+    r.decision = null;
+    r.check = null;
+    r.roll = null;
+    r.total = null;
+    r.success = null;
+  });
+
+  // Use current (post-damage) NPC stats so players see updated HP on the new card.
+  const npcStats = { hp: aggro.hp, ac: aggro.ac, str: aggro.str, dex: aggro.dex };
+  const options = GameCatalog.getOptionsForEncounter(npc.role, seed);
+  const at = new Date().toISOString();
+  const dmName = myUsername;
+
+  const aliveTargets = targetSocketIds.filter(sid =>
+    partyMembers[sid] && !partyMembers[sid].isDM && dmGetPlayerCurrentHp(sid) > 0
+  );
+  if (aliveTargets.length === 0) return;
+
+  addMessage(`🔁 ${resolvedName} still stands (${aggro.hp}/${aggro.maxHp} HP) — players are prompted again.`, 'narrate');
+  aliveTargets.forEach(sid => {
+    P2PMesh.sendToPeer(sid, {
+      t: 'encounter:prompt',
+      eid,
+      npcName: resolvedName,
+      npcRole: npc.role,
+      npcStats,
+      options,
+      dmName,
+      at,
+    });
+  });
+
+  dmUpdateEncounterRosterPanel(eid);
 }
 
 // ─── Trade Item ───────────────────────────────────────────────────────────────
@@ -1273,7 +1324,7 @@ function triggerTrade() {
 // ─── DM: Spawn NPC ────────────────────────────────────────────────────────────
 function dmSpawnNPC() {
   if (!isDM) return;
-  const npcType      = spawnNpcType?.value || 'utility';
+  const npcType      = spawnNpcType?.value || 'aggro';
   const templateId   = document.getElementById('spawn-npc-template')?.value || '';
   const npcName      = spawnNpcName?.value.trim() || '';
   const target       = spawnTarget?.value || 'all';
@@ -2088,6 +2139,12 @@ P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNa
   const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
   const msgBox = document.getElementById('message-feed');
   if (!msgBox) return;
+
+  // If a card for this encounter already exists (re-prompt across rounds),
+  // remove it so the new prompt replaces it cleanly.
+  const existingCard = document.getElementById(`encounter-card-${eid}`);
+  if (existingCard) existingCard.remove();
+  if (encRollIntervals[eid]) { clearInterval(encRollIntervals[eid]); delete encRollIntervals[eid]; }
 
   const card = document.createElement('div');
   card.className = 'msg-card msg-card--encounter';
