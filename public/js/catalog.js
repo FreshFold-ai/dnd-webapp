@@ -317,7 +317,19 @@
     ];
 
     const shuffled = allOptions.sort(() => rng() - 0.5);
-    const picked = shuffled.slice(0, 3);
+
+    // Always pin a direct attack option for combat-capable NPCs (aggro/grey).
+    const picked = [];
+    const attackOpt = OPTION_POOLS.combat.find(o => o.id === 'attack_direct');
+    if (attackOpt && (role === 'aggro' || role === 'grey')) {
+      picked.push(attackOpt);
+    }
+
+    for (const opt of shuffled) {
+      if (picked.length >= 3) break;
+      if (picked.find(o => o.id === opt.id)) continue;
+      picked.push(opt);
+    }
 
     const universal = OPTION_POOLS.universal[Math.floor(rng() * OPTION_POOLS.universal.length)];
     if (!picked.find(o => o.id === universal.id)) picked.push(universal);
