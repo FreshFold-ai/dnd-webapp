@@ -1713,7 +1713,14 @@ socket.on('room:count', ({ count }) => {
 
 socket.on('server:error', ({ message }) => {
   if (loadingScreen) loadingScreen.classList.add('hidden');
-  displayError(message || 'An unknown server error occurred.');
+  const text = message || 'An unknown server error occurred.';
+  displayError(text);
+  // The chat feed is hidden while still on the join screen, so surface the
+  // error via an alert so the user actually sees it (e.g. "Room not found"
+  // after a server redeploy wipes the in-memory room list).
+  if (joinSection && !joinSection.classList.contains('hidden')) {
+    try { alert(text); } catch (_) { /* alert may be blocked */ }
+  }
 });
 
 socket.on('connect_error', (error) => {
