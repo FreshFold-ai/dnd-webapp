@@ -345,6 +345,33 @@
     return items;
   }
 
+  // ─── Inventory Equip Boost Calculator ────────────────────────────────────────
+  // Returns stat deltas (object keyed by stat name) for all equipped items
+  // in the player's inventory. Equip-hook items with stat mappings:
+  //   atk → might,  def → endurance,  spd → agility
+  function getInventoryEquipBoosts(itemNames) {
+    const EQUIP_STAT_MAP = { atk: 'might', def: 'endurance', spd: 'agility' };
+    const bonuses = { might: 0, agility: 0, endurance: 0, intellect: 0, intuition: 0, presence: 0 };
+    if (!Array.isArray(itemNames)) return bonuses;
+    // Build a name→id lookup once
+    const nameToId = {};
+    Object.values(ITEM_TYPES).forEach(t => { nameToId[t.name] = t.id; });
+    itemNames.forEach(name => {
+      const id = nameToId[String(name).trim()];
+      if (!id) return;
+      const itemDef = ITEM_TYPES[id];
+      if (!itemDef || !itemDef.effect) return;
+      const effectDef = EFFECT_DESCRIPTORS[itemDef.effect];
+      if (!effectDef || effectDef.hook !== 'equip' || effectDef.value === 0) return;
+      const rawStat = effectDef.stat; // 'atk', 'def', 'spd', or already a full stat key
+      const mappedStat = EQUIP_STAT_MAP[rawStat] || rawStat;
+      if (mappedStat in bonuses) {
+        bonuses[mappedStat] += effectDef.value;
+      }
+    });
+    return bonuses;
+  }
+
   // ─── Export ───────────────────────────────────────────────────────────────────
   global.GameCatalog = {
     NPC_TEMPLATES,
@@ -356,5 +383,6 @@
     seededRandom,
     getOptionsForEncounter,
     drawLoot,
+    getInventoryEquipBoosts,
   };
 })(window);

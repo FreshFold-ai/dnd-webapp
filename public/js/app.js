@@ -42,7 +42,11 @@ let dmWhisperTarget, dmWhisperInput;
 let inventoryBox, inventoryList, tradeInventoryButtons, tradeTargetSelect, tradeSelectedItem;
 let dmSpawnSection, dmEnvSection, spawnLimitInfo, envLimitInfo;
 let spawnNpcType, spawnNpcName, spawnTarget, envEventType, envEventDetail, envTarget;
+// Legacy refs kept for compat; new dice-panel element refs below
 let actionSection, actionInput, actionStatus, actionCheckSummary, actionSubmitBtn, actionRollBtn;
+// New dice-panel refs
+let dicePanelEl, diceInputPhase, diceCheckPhase, diceCheckInfo, diceFaceDisplay, diceRollBtn, diceResult;
+let diceRollInterval = null;
 
 const ROOM_TYPES = [
   'Village', 'Township', 'City', 'Ruins', 'Castle', 'Manor', 'Desert', 'Oasis',
@@ -190,6 +194,19 @@ document.addEventListener('DOMContentLoaded', () => {
   actionCheckSummary = document.getElementById('action-check-summary');
   actionSubmitBtn = document.getElementById('action-submit-btn');
   actionRollBtn = document.getElementById('action-roll-btn');
+  // New dice-panel refs
+  dicePanelEl   = document.getElementById('dice-panel');
+  diceInputPhase = document.getElementById('dice-input-phase');
+  diceCheckPhase = document.getElementById('dice-check-phase');
+  diceCheckInfo  = document.getElementById('dice-check-info');
+  diceFaceDisplay = document.getElementById('dice-face-display');
+  diceRollBtn    = document.getElementById('dice-roll-btn');
+  diceResult     = document.getElementById('dice-result');
+  // Re-assign shared refs to new panel equivalents
+  actionSection  = dicePanelEl;
+  actionInput    = document.getElementById('action-input');
+  actionSubmitBtn = document.getElementById('action-submit-btn');
+  actionStatus   = document.getElementById('action-status');
   inventoryBox = document.getElementById('inventory-box');
   inventoryList = document.getElementById('inventory-list');
   tradeInventoryButtons = document.getElementById('trade-inventory-buttons');
@@ -282,42 +299,65 @@ function formatRoundResolutionMessage(result) {
 
 function updateRoundActionUI() {
   const isPlayer = !isDM;
-  if (actionSection) actionSection.classList.toggle('hidden', !isPlayer);
-  if (diceSection) diceSection.classList.toggle('hidden', !isPlayer);
+  // Show/hide entire dice panel
+  if (dicePanelEl) dicePanelEl.classList.toggle('hidden', !isPlayer);
+  // Hide old sections in case they still exist in DOM
+  if (diceSection)  diceSection.classList.add('hidden');
+
   if (!isPlayer) return;
 
   const actionPhase = currentRoundPhase === 'action';
-  const hasAssignedAction = Boolean(myPendingRoundAction);
-  const hasLockedRoll = Boolean(hasAssignedAction && myPendingRoundAction.roll !== null && myPendingRoundAction.roll !== undefined);
+  const hasAssigned = Boolean(myPendingRoundAction);
+  const hasRolled   = Boolean(hasAssigned && myPendingRoundAction.roll !== null && myPendingRoundAction.roll !== undefined);
 
-  if (actionInput) {
-    actionInput.disabled = !actionPhase || hasAssignedAction;
-  }
+  // Toggle sub-phases
+  if (diceInputPhase) diceInputPhase.classList.toggle('hidden', hasAssigned);
+  if (diceCheckPhase) diceCheckPhase.classList.toggle('hidden', !hasAssigned);
+
+  // Submit button
   if (actionSubmitBtn) {
-    actionSubmitBtn.disabled = !actionPhase || hasAssignedAction || !(actionInput?.value.trim());
+    actionSubmitBtn.disabled = !actionPhase || hasAssigned || !(actionInput?.value.trim());
   }
-  if (actionRollBtn) {
-    actionRollBtn.disabled = !actionPhase || !hasAssignedAction || hasLockedRoll;
+  // Roll button
+  if (diceRollBtn) {
+    diceRollBtn.disabled = !actionPhase || !hasAssigned || hasRolled;
   }
+
+  // Status text
   if (actionStatus) {
     if (!actionPhase) {
       actionStatus.textContent = currentRoundPhase === 'encounter'
         ? 'An encounter is active. Resolve it before taking a new round action.'
         : 'Waiting for the next round to open the action phase.';
-    } else if (!hasAssignedAction) {
+    } else if (!hasAssigned) {
       actionStatus.textContent = 'Describe one action to attempt this round.';
-    } else if (!hasLockedRoll) {
-      actionStatus.textContent = `Locked action: ${myPendingRoundAction.text}`;
+    } else if (!hasRolled) {
+      actionStatus.textContent = `Action submitted: "${myPendingRoundAction.text}" — roll when ready.`;
     } else {
       actionStatus.textContent = `Roll locked: ${myPendingRoundAction.roll}. Waiting for round resolution.`;
     }
   }
-  if (actionCheckSummary) {
-    if (!hasAssignedAction) {
-      actionCheckSummary.textContent = 'Submit an action to receive a stat check.';
+
+  // Check info line
+  if (diceCheckInfo) {
+    if (!hasAssigned) {
+      diceCheckInfo.textContent = 'Waiting for DM to assign a stat check…';
     } else {
-      actionCheckSummary.textContent = `Roll d20 + ${myPendingRoundAction.statLabel} (${formatActionStatValue(myPendingRoundAction.statValue)}) vs ${myPendingRoundAction.threshold}`;
+      const bonus = myPendingRoundAction.statValue >= 0
+        ? `+${formatActionStatValue(myPendingRoundAction.statValue)}`
+        : formatActionStatValue(myPendingRoundAction.statValue);
+      diceCheckInfo.textContent = `Roll d20 ${bonus} ${myPendingRoundAction.statLabel} vs ${myPendingRoundAction.threshold}`;
     }
+  }
+
+  // Show result only once rolled
+  if (diceResult && hasRolled && myPendingRoundAction) {
+    const { roll, statValue, statLabel, threshold } = myPendingRoundAction;
+    const total = roll + (statValue || 0);
+    const bonus = statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+    diceResult.textContent = `${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} — ${total >= threshold ? 'SUCCESS ✓' : 'FAILURE ✗'}`;
+  } else if (diceResult && !hasRolled) {
+    diceResult.textContent = '';
   }
 }
 
@@ -355,7 +395,24 @@ function renderInventory() {
 
     const tag = document.createElement('span');
     tag.className = 'inv-item-tag';
-    tag.textContent = meta.tag;
+
+    // Check if this item has an equip bonus via GameCatalog
+    let tagText = meta.tag;
+    if (typeof GameCatalog !== 'undefined') {
+      const nameToId = {};
+      Object.values(GameCatalog.ITEM_TYPES).forEach(t => { nameToId[t.name] = t.id; });
+      const id = nameToId[String(item).trim()];
+      if (id) {
+        const itemDef = GameCatalog.ITEM_TYPES[id];
+        const effectDef = itemDef?.effect ? GameCatalog.EFFECT_DESCRIPTORS[itemDef.effect] : null;
+        if (effectDef && effectDef.hook === 'equip' && effectDef.label) {
+          tagText = effectDef.label;
+        } else if (effectDef && effectDef.hook === 'on_use' && effectDef.label) {
+          tagText = effectDef.label;
+        }
+      }
+    }
+    tag.textContent = tagText;
 
     div.append(icon, name, tag);
     inventoryList.appendChild(div);
@@ -977,7 +1034,16 @@ function submitRoundAction() {
     displayError('Describe what you want to attempt this round.');
     return;
   }
-  P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-action', text });
+  const statBonus = (typeof GameCatalog !== 'undefined' && GameCatalog.getInventoryEquipBoosts)
+    ? GameCatalog.getInventoryEquipBoosts(myInventory)
+    : {};
+  P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-action', text, statBonus });
+  // Transition UI immediately to check-phase (waiting for DM stat assignment)
+  if (diceInputPhase) diceInputPhase.classList.add('hidden');
+  if (diceCheckPhase) diceCheckPhase.classList.remove('hidden');
+  if (diceCheckInfo)  diceCheckInfo.textContent = 'Waiting for DM to assign a stat check…';
+  if (actionStatus)   actionStatus.textContent = `Action submitted: "${text}" — waiting for DM assignment.`;
+  if (actionSubmitBtn) actionSubmitBtn.disabled = true;
 }
  
 // ─── DnD: Dice Roll ───────────────────────────────────────────────────────────
@@ -990,7 +1056,32 @@ function rollDice(die = 20) {
     displayError('Round actions use a d20 check only.');
     return;
   }
+  if (diceRollBtn) diceRollBtn.disabled = true;
+  if (actionStatus) actionStatus.textContent = 'Rolling…';
+
+  // Start dice face animation
+  if (diceFaceDisplay) {
+    diceFaceDisplay.classList.add('dice-face--rolling');
+    const wrapper = diceFaceDisplay.closest('.dice-face-wrapper');
+    if (wrapper) wrapper.classList.add('rolling');
+    if (diceRollInterval) clearInterval(diceRollInterval);
+    diceRollInterval = setInterval(() => {
+      diceFaceDisplay.textContent = String(Math.floor(Math.random() * 20) + 1);
+    }, 80);
+  }
+
   P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-roll' });
+}
+
+// Stop dice animation and settle on a final value
+function settleDiceRoll(roll) {
+  if (diceRollInterval) { clearInterval(diceRollInterval); diceRollInterval = null; }
+  if (diceFaceDisplay) {
+    diceFaceDisplay.textContent = String(roll);
+    diceFaceDisplay.classList.remove('dice-face--rolling');
+    const wrapper = diceFaceDisplay.closest('.dice-face-wrapper');
+    if (wrapper) wrapper.classList.remove('rolling');
+  }
 }
 
 function advanceRound() {
@@ -1026,7 +1117,7 @@ function dmPickStat(text) {
 }
 
 // DM receives a player's declared action text → assign stat check, broadcast declaration
-P2PMesh.on('round:submit-action', ({ text, _from }) => {
+P2PMesh.on('round:submit-action', ({ text, statBonus, _from }) => {
   if (!isDM) return;
   const member = partyMembers[_from];
   if (!member) return;
@@ -1035,14 +1126,17 @@ P2PMesh.on('round:submit-action', ({ text, _from }) => {
   const statKey   = dmPickStat(text);
   const statLabel = STAT_LABELS[statKey];
   const statScore = Number(stats[statKey] || 10);
-  const statValue = Math.floor((statScore - 10) / 2);
+  const baseMod   = Math.floor((statScore - 10) / 2);
+  // Apply any equip bonus the player reported
+  const itemBonus = (statBonus && typeof statBonus[statKey] === 'number') ? statBonus[statKey] : 0;
+  const statValue = baseMod + itemBonus;
   const threshold = ACTION_THRESHOLD;
 
   dmRoundActions[_from] = { text, statKey, statLabel, statScore, statValue, threshold, roll: null, username };
 
   // Broadcast declaration to all (including DM's own feed via local call below)
   P2PMesh.broadcast({ t: 'round:action:declared', from: username, text });
-  addMessage(`${username} commits: ${text}`, 'system');
+  addMessage(`${username} commits: ${text}${itemBonus ? ` (item bonus +${itemBonus} ${statLabel})` : ''}`, 'system');
 
   // Broadcast prompted check to all observers
   P2PMesh.broadcast({ t: 'round:action:prompted', from: username, text, statLabel, statValue, threshold });
@@ -1076,6 +1170,14 @@ P2PMesh.on('round:submit-roll', ({ _from }) => {
 // DM advances the round: resolve all pending actions, broadcast results, bump round number
 function dmAdvanceRound() {
   const roundNumber = currentRoundNumber;
+
+  // Soft-block: warn if any player submitted an action but hasn't rolled yet
+  const pendingRolls = Object.values(dmRoundActions).filter(e => e.roll === null);
+  if (pendingRolls.length > 0) {
+    const names = pendingRolls.map(e => e.username).join(', ');
+    addMessage(`⚠️ [DM] Still waiting for roll(s) from: ${names}. Advancing anyway — unrolled actions get a random d20.`, 'system');
+  }
+
   const results = Object.entries(dmRoundActions).map(([sid, entry]) => {
     const roll = entry.roll ?? Math.floor(Math.random() * 20) + 1;
     const total = roll + entry.statValue;
@@ -1129,7 +1231,7 @@ function triggerTrade() {
   P2PMesh.sendToPeer(targetId, { t: 'trade:item', item: selectedTradeItem });
   // Also CC the DM so they can observe the trade
   if (dmSocketId && dmSocketId !== socket.id && dmSocketId !== targetId) {
-    P2PMesh.sendToPeer(dmSocketId, { t: 'trade:item', item: selectedTradeItem, _observedBy: 'dm' });
+    P2PMesh.sendToPeer(dmSocketId, { t: 'trade:item', item: selectedTradeItem, _observedBy: 'dm', _targetId: targetId });
   }
   // Local sender confirmation
   const toUsername = partyMembers[targetId]?.username || targetId;
@@ -1214,6 +1316,8 @@ function dmStartEncounter({ npcType, templateId, npcName, target }) {
   const roleLabel = { aggro: '\u2694\ufe0f AGGRO', grey: '\ud83c\udf2b\ufe0f GREY', utility: '\ud83d\udd27 UTILITY' }[npc.role] || npc.role;
   P2PMesh.broadcast({ t: 'encounter:start', eid, npcName: resolvedName, npcRole: npc.role, npcStats, targetSocketIds, dmName, at });
   addMessage(`[ENCOUNTER STARTED] ${roleLabel} "${resolvedName}" | HP:${npc.hp} AC:${npc.ac} | ${targetSocketIds.length} target(s)`, 'narrate');
+  // DM builds its panel locally (does not receive its own broadcast)
+  buildDmEncounterPanel(eid, resolvedName);
 
   targetSocketIds.forEach(sid => {
     P2PMesh.sendToPeer(sid, { t: 'encounter:prompt', eid, npcName: resolvedName, npcRole: npc.role, npcStats, options, dmName, at });
@@ -1279,13 +1383,21 @@ function dmUpdateEncounterRosterPanel(eid) {
   const el = document.getElementById('dm-encounter-roster');
   if (!el) return;
   const ready = activeEncounter.roster.every(r => r.decision && (!r.check?.requiresRoll || r.roll !== null));
-  const summary = ready ? '<div class="roster-row"><strong>Encounter ready. Advance the round to resolve it.</strong></div>' : '';
+  const summary = ready ? '<div class="roster-row"><strong>✅ Encounter ready. Advance the round to resolve it.</strong></div>' : '';
   el.innerHTML = summary + activeEncounter.roster.map(p => {
+    let statusIcon = '⏳';
     let rollText = 'awaiting choice';
-    if (p.decision && p.check?.requiresRoll && p.roll === null) rollText = `awaiting d20 vs ${p.check.threshold}`;
-    else if (p.decision && p.check?.requiresRoll) rollText = `d20 ${p.roll}+${p.check.statValue}=${p.total} (${p.success ? 'success' : 'failure'})`;
-    else if (p.decision) rollText = 'no roll required';
-    return `<div class="roster-row"><span>${escapeHtml(p.username)}</span><span>${p.decision ? escapeHtml(p.decision.optionLabel) : '\u2014'}</span><span>${rollText}</span></div>`;
+    if (p.decision && p.check?.requiresRoll && p.roll === null) {
+      statusIcon = '🎲';
+      rollText = `awaiting d20 vs ${p.check.threshold}`;
+    } else if (p.decision && p.check?.requiresRoll) {
+      statusIcon = '✅';
+      rollText = `d20 ${p.roll}+${p.check.statValue}=${p.total} (${p.success ? 'success' : 'failure'})`;
+    } else if (p.decision) {
+      statusIcon = '✅';
+      rollText = 'no roll required';
+    }
+    return `<div class="roster-row"><span>${statusIcon} ${escapeHtml(p.username)}</span><span>${p.decision ? escapeHtml(p.decision.optionLabel) : '—'}</span><span>${rollText}</span></div>`;
   }).join('');
 }
 
@@ -1319,12 +1431,15 @@ function dmResolveEncounter(eid, outcome) {
   addMessage(`${outcomeEmoji} Encounter resolved: ${outcome}. ${flavor}`, 'narrate');
   const dmPanel = document.getElementById('dm-encounter-panel');
   if (dmPanel) dmPanel.remove();
-} ──────────────────────────────────────────────────────────
+} 
+
 function sendNarration() {
   const text = narrateInput.value.trim();
   if (!text) return;
   P2PMesh.broadcast({ t: 'game:narrate', text });
   narrateInput.value = '';
+  // DM never receives its own broadcast — echo locally
+  addMessage(`📜 [DM] ${text}`, 'narrate');
 }
 
  
@@ -1624,7 +1739,8 @@ P2PMesh.on('round:action:assigned', ({ text, statKey, statLabel, statScore, stat
   };
   if (actionInput) actionInput.value = '';
   updateRoundActionUI();
-  addMessage(`[Check] Roll d20 + ${statLabel} (${formatActionStatValue(statValue)}) vs ${threshold} for "${text}".`, 'system');
+  const bonus = statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+  addMessage(`[Check Assigned] Roll d20 ${bonus} ${statLabel} vs ${threshold} for "${text}".`, 'system');
 });
 
 P2PMesh.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore, statValue, threshold, roll }) => {
@@ -1637,6 +1753,7 @@ P2PMesh.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore,
     threshold,
     roll,
   };
+  settleDiceRoll(roll);
   updateRoundActionUI();
   addMessage(`[Roll Locked] d20 ${roll} locked for "${text}". Resolution happens when the DM advances the round.`, 'roll');
 });
@@ -1651,6 +1768,8 @@ P2PMesh.on('round:actions:resolved', ({ roundNumber, results }) => {
     addMessage(formatRoundResolutionMessage({ ...result, roundNumber }), result.success ? 'system' : 'error');
   });
   myPendingRoundAction = null;
+  if (diceFaceDisplay) diceFaceDisplay.textContent = '?';
+  if (diceResult) diceResult.textContent = '';
   updateRoundActionUI();
 });
 
@@ -1706,10 +1825,11 @@ P2PMesh.on('game:narrate', ({ text }) => {
 
 // ─── Trade / Inventory ────────────────────────────────────────────────────────
 
-P2PMesh.on('trade:item', ({ item, _from, _observedBy }) => {
+P2PMesh.on('trade:item', ({ item, _from, _observedBy, _targetId }) => {
   const fromUsername = partyMembers[_from]?.username || _from;
   if (isDM || _observedBy === 'dm') {
-    addMessage(`🔔 Trade: ${fromUsername} → someone: ${item}`, 'system');
+    const toUsername = _targetId ? (partyMembers[_targetId]?.username || _targetId) : 'someone';
+    addMessage(`🔔 Trade: ${fromUsername} → ${toUsername}: ${item}`, 'system');
     return;
   }
   myInventory.push(item);
@@ -1717,9 +1837,19 @@ P2PMesh.on('trade:item', ({ item, _from, _observedBy }) => {
   renderInventory();
   renderTradeInventory();
   addMessage(`💼 ${fromUsername} traded you: ${item}`, 'trade');
+  // Notify DM of updated inventory
+  if (dmSocketId && dmSocketId !== socket.id) {
+    P2PMesh.sendToPeer(dmSocketId, { t: 'player:inventory-update', inventory: myInventory });
+  }
 });
 
 // ─── DM Spawn / Environment ───────────────────────────────────────────────────
+
+// DM receives inventory updates from players after trades or loot
+P2PMesh.on('player:inventory-update', ({ inventory, _from }) => {
+  if (!isDM) return;
+  if (partyMembers[_from]) partyMembers[_from].inventory = inventory;
+});
 
 // Players receive dm:env broadcasts from the DM
 P2PMesh.on('dm:env', ({ eventType, detail }) => {
@@ -1743,13 +1873,9 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
-P2PMesh.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketIds, dmName, at }) => {
-  const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
-  addMessage(
-    `[ENCOUNTER STARTED] ${roleLabel} "${npcName}" | HP:${npcStats.hp} AC:${npcStats.ac} STR:${npcStats.str} DEX:${npcStats.dex} | Targets: ${targetSocketIds.length} player(s)`,
-    'narrate'
-  );
-  // DM can force-resolve via button that appears below
+// Build the DM-side encounter panel (roster + force-resolve buttons).
+// Called directly by dmStartEncounter() so the DM sees it immediately.
+function buildDmEncounterPanel(eid, npcName) {
   const msgBox = document.getElementById('message-feed');
   if (!msgBox) return;
   const existing = document.getElementById('dm-encounter-panel');
@@ -1761,7 +1887,6 @@ P2PMesh.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketId
     <strong>Active Encounter: "${escapeHtml(npcName)}"</strong>
     <div id="dm-encounter-roster" class="encounter-roster">Waiting for players...</div>
     <div class="encounter-force-row"></div>`;
-  // Add force-resolve buttons via DOM to avoid inline event handlers (XSS prevention)
   const forceRow = panel.querySelector('.encounter-force-row');
   ['death', 'negotiate', 'flee'].forEach(outc => {
     const btn = document.createElement('button');
@@ -1770,6 +1895,17 @@ P2PMesh.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketId
     forceRow.appendChild(btn);
   });
   msgBox.parentElement.insertBefore(panel, msgBox);
+}
+
+P2PMesh.on('encounter:start', ({ eid, npcName, npcRole, npcStats, targetSocketIds, dmName, at }) => {
+  const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
+  addMessage(
+    `[ENCOUNTER STARTED] ${roleLabel} "${npcName}" | HP:${npcStats.hp} AC:${npcStats.ac} STR:${npcStats.str} DEX:${npcStats.dex} | Targets: ${targetSocketIds.length} player(s)`,
+    'narrate'
+  );
+  // DM builds its own panel inside dmStartEncounter(); non-DM peers get the read-only version here.
+  if (isDM) return;
+  buildDmEncounterPanel(eid, npcName);
 });
 
 P2PMesh.on('encounter:roster', ({ eid, roster, ready }) => {
@@ -1815,8 +1951,11 @@ P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNa
     <div class="encounter-stats">HP: ${npcStats.hp} | AC: ${npcStats.ac} | STR: ${npcStats.str} | DEX: ${npcStats.dex}</div>
     <div class="encounter-actions"></div>
     <div class="encounter-roll-section" id="enc-roll-${eid}" style="display:none;">
-      <label>Roll d20 (1-20): <input type="number" id="enc-roll-input-${eid}" min="1" max="20" value="10" style="width:60px;"></label>
-      <button class="encounter-roll-btn" id="enc-roll-btn-${eid}">Submit Roll</button>
+      <div class="dice-face-wrapper enc-dice-wrapper">
+        <div class="dice-face" id="enc-dice-face-${eid}">?</div>
+      </div>
+      <button class="dice-btn encounter-roll-btn" id="enc-roll-btn-${eid}">Roll d20</button>
+      <span class="enc-roll-info" id="enc-roll-info-${eid}"></span>
     </div>
     <div class="encounter-result" id="enc-result-${eid}"></div>`;
   // Add option buttons via DOM to avoid inline event handlers (XSS prevention)
@@ -1825,22 +1964,32 @@ P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmNa
     const btn = document.createElement('button');
     btn.className = 'encounter-btn';
     btn.textContent = opt.label + (opt.reqRoll ? ' (check required)' : ' (no roll)');
-    btn.addEventListener('click', () => submitEncounterDecision(eid, opt.id, opt.label));
+    btn.addEventListener('click', () => submitEncounterDecision(eid, opt.id, opt.label, opt.reqRoll));
     actionsDiv.appendChild(btn);
   });
-  const rollBtn = document.getElementById(`enc-roll-btn-${eid}`);
-  if (rollBtn) rollBtn.addEventListener('click', () => submitEncounterRoll(eid));
 
+  // Append card FIRST so querySelector finds the elements inside it
   msgBox.appendChild(card);
   msgBox.scrollTop = msgBox.scrollHeight;
+
+  // Now safely attach the roll button listener (element is in the DOM)
+  const rollBtn = card.querySelector(`#enc-roll-btn-${eid}`);
+  if (rollBtn) rollBtn.addEventListener('click', () => submitEncounterRoll(eid));
 });
 
-function submitEncounterDecision(eid, optionId, optionLabel) {
+function submitEncounterDecision(eid, optionId, optionLabel, reqRoll) {
   if (activeEncounterEid !== eid) return;
   P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:decide', eid, optionId, optionLabel });
   // Disable decision buttons
   const card = document.getElementById(`encounter-card-${eid}`);
   if (card) card.querySelectorAll('.encounter-btn').forEach(b => b.disabled = true);
+  // Immediately reveal roll section if this option needs a check (DM ack will fill in stat details)
+  if (reqRoll) {
+    const rollSection = document.getElementById(`enc-roll-${eid}`);
+    if (rollSection) rollSection.style.display = 'block';
+    const res = document.getElementById(`enc-result-${eid}`);
+    if (res) res.textContent = `Choice locked: ${optionLabel}. Waiting for DM to assign stat check…`;
+  }
 }
 
 P2PMesh.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, resolutionText }) => {
@@ -1861,19 +2010,48 @@ P2PMesh.on('encounter:decision:ack', ({ eid, optionLabel, needsRoll, check, reso
   }
 });
 
+// Per-encounter dice animation interval map
+const encRollIntervals = {};
+
 function submitEncounterRoll(eid) {
-  const input = document.getElementById(`enc-roll-input-${eid}`);
-  const roll = Math.max(1, Math.min(20, parseInt(input?.value || '10', 10)));
-  P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:roll', eid, roll });
+  const faceEl = document.getElementById(`enc-dice-face-${eid}`);
+  const btnEl  = document.getElementById(`enc-roll-btn-${eid}`);
+  const infoEl = document.getElementById(`enc-roll-info-${eid}`);
+
+  if (btnEl) btnEl.disabled = true;
+  if (infoEl) infoEl.textContent = 'Rolling…';
+
+  // Start dice face animation
+  if (faceEl) {
+    faceEl.classList.add('dice-face--rolling');
+    const wrapper = faceEl.closest('.dice-face-wrapper');
+    if (wrapper) wrapper.classList.add('rolling');
+    if (encRollIntervals[eid]) clearInterval(encRollIntervals[eid]);
+    encRollIntervals[eid] = setInterval(() => {
+      faceEl.textContent = String(Math.floor(Math.random() * 20) + 1);
+    }, 80);
+  }
+
+  // DM generates the authoritative roll
+  P2PMesh.sendToPeer(dmSocketId, { t: 'encounter:roll', eid });
 }
 
 P2PMesh.on('encounter:roll:ack', ({ eid, roll, statLabel, statValue, threshold, total, success }) => {
-  const res = document.getElementById(`enc-result-${eid}`);
-  if (res) {
-    res.textContent = `Roll locked: ${roll} + ${formatActionStatValue(statValue)} = ${total} vs ${threshold} (${success ? 'success' : 'failure'}). Resolution happens when the DM advances the round.`;
+  // Settle dice animation
+  if (encRollIntervals[eid]) { clearInterval(encRollIntervals[eid]); delete encRollIntervals[eid]; }
+  const faceEl = document.getElementById(`enc-dice-face-${eid}`);
+  if (faceEl) {
+    faceEl.textContent = String(roll);
+    faceEl.classList.remove('dice-face--rolling');
+    const wrapper = faceEl.closest('.dice-face-wrapper');
+    if (wrapper) wrapper.classList.remove('rolling');
   }
-  const rollSection = document.getElementById(`enc-roll-${eid}`);
-  if (rollSection) rollSection.querySelector('button').disabled = true;
+  const infoEl = document.getElementById(`enc-roll-info-${eid}`);
+  const bonus = Number(statValue) >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+  const resultText = `${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} — ${success ? 'SUCCESS ✓' : 'FAILURE ✗'}`;
+  if (infoEl) infoEl.textContent = resultText;
+  const res = document.getElementById(`enc-result-${eid}`);
+  if (res) res.textContent = `Roll locked. ${resultText}. Waiting for DM to resolve the encounter.`;
 });
 
 P2PMesh.on('encounter:ready', ({ eid, npcName }) => {
@@ -1913,6 +2091,10 @@ P2PMesh.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot,
     myLoot.forEach(item => { myInventory.push(item.name); });
     saveInventoryToStorage();
     renderInventory();
+    // Notify DM of updated inventory
+    if (dmSocketId && dmSocketId !== socket.id) {
+      P2PMesh.sendToPeer(dmSocketId, { t: 'player:inventory-update', inventory: myInventory });
+    }
   }
 
   const resultHtml = `

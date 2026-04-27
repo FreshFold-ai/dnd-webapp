@@ -380,21 +380,27 @@ button:active { transform: scale(0.97); }
 #chat-section {
   display: flex;
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   height: 100vh;
   gap: 0;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .sidebar {
-  width: 180px;
-  min-width: 180px;
+  width: 260px;
+  min-width: 260px;
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
 }
 
 .room-label, .member-label {
@@ -731,13 +737,123 @@ button:active { transform: scale(0.97); }
 }
 
 #action-section,
-#dice-section {
+#dice-section,
+#dice-panel {
   align-items: flex-start;
+  flex-direction: column;
 }
 
-#action-section input {
+#dice-panel input {
   flex: 1;
   min-width: 240px;
+  width: 100%;
+}
+
+#dice-input-phase {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+#dice-input-phase input { flex: 1; min-width: 200px; }
+
+#dice-check-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+/* ── Dice Face ─────────────────────────────────────────────────────────── */
+.dice-face-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border: 2px solid var(--accent-dim);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 0 12px rgba(196, 145, 55, 0.3);
+  transition: box-shadow 0.2s;
+}
+
+.dice-face-wrapper.rolling {
+  box-shadow: 0 0 22px rgba(196, 145, 55, 0.7);
+  border-color: var(--accent);
+}
+
+.dice-face {
+  font-size: 2.2rem;
+  font-weight: 900;
+  font-family: var(--font);
+  color: var(--roll);
+  line-height: 1;
+  user-select: none;
+  letter-spacing: -2px;
+}
+
+.enc-dice-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+}
+
+.enc-dice-wrapper .dice-face { font-size: 1.6rem; }
+
+@keyframes dice-flicker {
+  0%   { opacity: 1; }
+  45%  { opacity: 0.4; }
+  50%  { opacity: 1; }
+  95%  { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.dice-face--rolling {
+  animation: dice-flicker 0.12s linear infinite;
+}
+
+.dice-result {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: bold;
+  text-align: center;
+  min-height: 1.2em;
+}
+
+.enc-roll-info {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+/* ── Dice button (large variant) ─────────────────────────────────────────── */
+.dice-btn {
+  background: var(--bg);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.dice-btn:hover {
+  background: rgba(196, 145, 55, 0.15);
+  box-shadow: 0 0 8px rgba(196, 145, 55, 0.4);
+}
+
+.dice-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--bg);
+  color: var(--text-dim);
+  box-shadow: none;
 }
 
 #trade-section {
@@ -772,23 +888,7 @@ button:active { transform: scale(0.97); }
   min-width: 220px;
 }
 
-.dice-btn {
-  background: var(--bg);
-  border: 1px solid var(--accent-dim);
-  color: var(--accent);
-  padding: 0.3rem 0.6rem;
-  font-size: 0.82rem;
-  border-radius: 6px;
-}
-
-.dice-btn:hover { background: var(--accent-dim); color: var(--text); }
-
-.dice-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  background: var(--bg);
-  color: var(--text-dim);
-}
+/* .dice-btn defined above in Dice Face section */
 
 /* ── Loading Screen ────────────────────────────────────────────────────────── */
 .loading-screen {
