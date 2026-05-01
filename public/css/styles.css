@@ -724,6 +724,12 @@ button:active { transform: scale(0.97); }
 
 .input-row input { flex: 1; }
 
+/* Action-mode highlight: chat input turns a soft blue when it accepts round actions */
+.input-row input[placeholder*="Round"] {
+  border-color: rgba(100, 160, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(80, 140, 255, 0.15);
+}
+
 /* ── Panels (dice / DM / trade) ──────────────────────────────────────────── */
 .panel {
   background: var(--surface);
@@ -1121,6 +1127,40 @@ button:active { transform: scale(0.97); }
 .msg-card--resolved {
   border-color: rgba(100, 200, 100, 0.4);
   background: rgba(0, 30, 0, 0.5);
+}
+
+/* ── Round Roll Card (in-chat d20 check UI) ──────────────────── */
+.msg-card--roll {
+  border: 1px solid rgba(100, 160, 255, 0.5);
+  background: rgba(10, 20, 50, 0.65);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.roll-card-header {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #90c8ff;
+}
+.roll-card-action {
+  font-style: italic;
+  color: #ddd;
+  font-size: 0.9rem;
+}
+.roll-card-check {
+  font-size: 0.85rem;
+  color: #a8c8ff;
+}
+.roll-card-dice {
+  margin: 0.2rem 0;
+}
+.roll-card-result {
+  font-size: 0.85rem;
+  color: #c0e0c0;
+  min-height: 1.1em;
 }
 .encounter-header {
   font-weight: bold; font-size: 1rem; color: #f4c060; margin-bottom: 0.3rem;

@@ -217,29 +217,6 @@
         <button onclick="sendMessageFromInput()">Send</button>
       </div>
 
-      <!-- Player dice-roll action panel (replaces old Round Action + Action Roll panels) -->
-      <div id="dice-panel" class="panel hidden">
-        <span class="panel-label">Your Action</span>
-
-        <!-- Phase 1: describe the action -->
-        <div id="dice-input-phase">
-          <input id="action-input" type="text" placeholder="What do you attempt this round…"/>
-          <button id="action-submit-btn" onclick="submitRoundAction()">Submit Action</button>
-        </div>
-
-        <!-- Phase 2: roll (shown after DM assigns stat check) -->
-        <div id="dice-check-phase" class="hidden">
-          <div id="dice-check-info" class="action-check-summary">Waiting for DM to assign a stat check…</div>
-          <div class="dice-face-wrapper">
-            <div class="dice-face" id="dice-face-display">?</div>
-          </div>
-          <button id="dice-roll-btn" class="dice-btn" onclick="rollDice(20)">Roll d20</button>
-          <div id="dice-result" class="dice-result"></div>
-        </div>
-
-        <span id="action-status" class="action-status">Describe one action to attempt this round.</span>
-      </div>
-
       <!-- DM-only narration (hidden for regular players) -->
       <div id="dm-section" class="panel hidden">
         <span class="panel-label">Set Scene</span>

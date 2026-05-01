@@ -189,24 +189,18 @@ document.addEventListener('DOMContentLoaded', () => {
   turnDisplay = document.getElementById('turn-display');
   nextRoundBtn = document.getElementById('next-round-btn');
   actionSection = document.getElementById('action-section');
-  actionInput = document.getElementById('action-input');
-  actionStatus = document.getElementById('action-status');
-  actionCheckSummary = document.getElementById('action-check-summary');
-  actionSubmitBtn = document.getElementById('action-submit-btn');
-  actionRollBtn = document.getElementById('action-roll-btn');
-  // New dice-panel refs
-  dicePanelEl   = document.getElementById('dice-panel');
-  diceInputPhase = document.getElementById('dice-input-phase');
-  diceCheckPhase = document.getElementById('dice-check-phase');
-  diceCheckInfo  = document.getElementById('dice-check-info');
-  diceFaceDisplay = document.getElementById('dice-face-display');
-  diceRollBtn    = document.getElementById('dice-roll-btn');
-  diceResult     = document.getElementById('dice-result');
-  // Re-assign shared refs to new panel equivalents
-  actionSection  = dicePanelEl;
-  actionInput    = document.getElementById('action-input');
-  actionSubmitBtn = document.getElementById('action-submit-btn');
-  actionStatus   = document.getElementById('action-status');
+  // dice-panel removed; these legacy refs are kept as null for safety
+  actionInput    = null;
+  actionSubmitBtn = null;
+  actionStatus   = null;
+  actionRollBtn  = null;
+  dicePanelEl    = null;
+  diceInputPhase = null;
+  diceCheckPhase = null;
+  diceCheckInfo  = null;
+  diceFaceDisplay = null;
+  diceRollBtn    = null;
+  diceResult     = null;
   inventoryBox = document.getElementById('inventory-box');
   inventoryList = document.getElementById('inventory-list');
   tradeInventoryButtons = document.getElementById('trade-inventory-buttons');
@@ -237,10 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
   [charLevelInput, charHPInput]
     .filter(Boolean)
     .forEach((input) => input.addEventListener('input', updateSliderSummaries));
-
-  if (actionInput) {
-    actionInput.addEventListener('input', updateRoundActionUI);
-  }
 
   updateSliderSummaries();
   updateStatsSummary();
@@ -299,65 +289,35 @@ function formatRoundResolutionMessage(result) {
 
 function updateRoundActionUI() {
   const isPlayer = !isDM;
-  // Show/hide entire dice panel
-  if (dicePanelEl) dicePanelEl.classList.toggle('hidden', !isPlayer);
-  // Hide old sections in case they still exist in DOM
-  if (diceSection)  diceSection.classList.add('hidden');
+  // Hide legacy section stubs if still in DOM
+  if (diceSection) diceSection.classList.add('hidden');
 
-  if (!isPlayer) return;
+  if (!isPlayer || !messageInput) return;
 
-  const actionPhase = currentRoundPhase === 'action';
   const hasAssigned = Boolean(myPendingRoundAction);
   const hasRolled   = Boolean(hasAssigned && myPendingRoundAction.roll !== null && myPendingRoundAction.roll !== undefined);
+  const encounterActive = Boolean(activeEncounterEid);
 
-  // Toggle sub-phases
-  if (diceInputPhase) diceInputPhase.classList.toggle('hidden', hasAssigned);
-  if (diceCheckPhase) diceCheckPhase.classList.toggle('hidden', !hasAssigned);
-
-  // Submit button
-  if (actionSubmitBtn) {
-    actionSubmitBtn.disabled = !actionPhase || hasAssigned || !(actionInput?.value.trim());
-  }
-  // Roll button
-  if (diceRollBtn) {
-    diceRollBtn.disabled = !actionPhase || !hasAssigned || hasRolled;
-  }
-
-  // Status text
-  if (actionStatus) {
-    if (!actionPhase) {
-      actionStatus.textContent = currentRoundPhase === 'encounter'
-        ? 'An encounter is active. Resolve it before taking a new round action.'
-        : 'Waiting for the next round to open the action phase.';
-    } else if (!hasAssigned) {
-      actionStatus.textContent = 'Describe one action to attempt this round.';
-    } else if (!hasRolled) {
-      actionStatus.textContent = `Action submitted: "${myPendingRoundAction.text}" — roll when ready.`;
-    } else {
-      actionStatus.textContent = `Roll locked: ${myPendingRoundAction.roll}. Waiting for round resolution.`;
-    }
-  }
-
-  // Check info line
-  if (diceCheckInfo) {
-    if (!hasAssigned) {
-      diceCheckInfo.textContent = 'Waiting for DM to assign a stat check…';
-    } else {
-      const bonus = myPendingRoundAction.statValue >= 0
-        ? `+${formatActionStatValue(myPendingRoundAction.statValue)}`
-        : formatActionStatValue(myPendingRoundAction.statValue);
-      diceCheckInfo.textContent = `Roll d20 ${bonus} ${myPendingRoundAction.statLabel} vs ${myPendingRoundAction.threshold}`;
-    }
-  }
-
-  // Show result only once rolled
-  if (diceResult && hasRolled && myPendingRoundAction) {
-    const { roll, statValue, statLabel, threshold } = myPendingRoundAction;
-    const total = roll + (statValue || 0);
-    const bonus = statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
-    diceResult.textContent = `${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} — ${total >= threshold ? 'SUCCESS ✓' : 'FAILURE ✗'}`;
-  } else if (diceResult && !hasRolled) {
-    diceResult.textContent = '';
+  // Chat input becomes the action interface during action phase.
+  if (encounterActive) {
+    // Encounter card is active — chat is not the action interface right now.
+    messageInput.disabled = true;
+    messageInput.placeholder = 'Encounter active \u2014 use the card above\u2026';
+  } else if (currentRoundPhase !== 'action') {
+    messageInput.disabled = false;
+    messageInput.placeholder = 'Say something to the party\u2026';
+  } else if (!hasAssigned) {
+    // Action phase, no action yet: chat send = action submission.
+    messageInput.disabled = false;
+    messageInput.placeholder = `\u2694\ufe0f Round ${currentRoundNumber} \u2014 type your action and press Send\u2026`;
+  } else if (!hasRolled) {
+    // Action submitted, waiting for check or roll card.
+    messageInput.disabled = true;
+    messageInput.placeholder = '\u23f3 Action submitted \u2014 roll your d20 in the card above\u2026';
+  } else {
+    // Roll locked, awaiting DM resolution.
+    messageInput.disabled = true;
+    messageInput.placeholder = '\u23f3 Roll locked \u2014 awaiting round resolution\u2026';
   }
 }
 
@@ -706,7 +666,7 @@ function updateSliderSummaries() {
 }
 
 function downloadTxtFile(filename, payload) {
-  const content = JSON.stringify(payload, null, 2);
+  const content = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -723,7 +683,95 @@ function requestCampaignExport() {
     displayError('Only the DM can export room snapshots.');
     return;
   }
-  socket.emit('room:export:campaign');
+
+  const now = new Date();
+  const hr = '='.repeat(60);
+  const div = '-'.repeat(40);
+  const lines = [];
+
+  lines.push(hr);
+  lines.push(`CAMPAIGN EXPORT — ${myRoomType || 'Unknown'} Room`);
+  lines.push(`Room Code     : ${myRoomId || 'Unknown'}`);
+  lines.push(`Dungeon Master: ${myUsername}`);
+  lines.push(`Round         : ${currentRoundNumber}`);
+  lines.push(`Exported      : ${now.toLocaleString()}`);
+  lines.push(hr);
+  lines.push('');
+
+  // Party Roster
+  lines.push('PARTY ROSTER');
+  lines.push(div);
+  const members = Object.values(partyMembers).filter(m => !m.isDM);
+  if (members.length === 0) {
+    lines.push('  (no players)');
+  } else {
+    members.forEach(m => {
+      const c = m.character || {};
+      lines.push(`  ${m.avatar || ''} ${m.username}`);
+      if (c.className || c.race) lines.push(`    Class/Race : ${c.className || '?'} / ${c.race || '?'}`);
+      if (c.level)  lines.push(`    Level      : ${c.level}`);
+      if (c.hp)     lines.push(`    HP         : ${c.hp}`);
+      if (c.stats) {
+        const s = c.stats;
+        lines.push(`    Stats      : Might ${s.might||0}  Agility ${s.agility||0}  Endurance ${s.endurance||0}  Intellect ${s.intellect||0}  Intuition ${s.intuition||0}  Presence ${s.presence||0}`);
+      }
+      if (c.backstory) lines.push(`    Backstory  : ${c.backstory}`);
+    });
+  }
+  lines.push('');
+
+  // Encounter History
+  lines.push('ENCOUNTER HISTORY');
+  lines.push(div);
+  const encounters = readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []);
+  if (encounters.length === 0) {
+    lines.push('  (none)');
+  } else {
+    encounters.forEach((e, i) => {
+      const when = e.at ? new Date(e.at).toLocaleTimeString() : '?';
+      const status = e.outcome ? `outcome: ${e.outcome}` : 'unresolved';
+      lines.push(`  ${i + 1}. ${e.npcName || e.eid} (${e.npcType || 'unknown'}) — started ${when}, ${status}`);
+    });
+  }
+  lines.push('');
+
+  // Active Encounter snapshot if any
+  if (activeEncounter) {
+    lines.push('ACTIVE ENCOUNTER');
+    lines.push(div);
+    const aggro = activeAggroNpcs[activeEncounter.eid];
+    lines.push(`  NPC    : ${activeEncounter.resolvedName}`);
+    if (aggro) lines.push(`  HP     : ${aggro.hp}/${aggro.maxHp}`);
+    lines.push('  Players:');
+    activeEncounter.roster.forEach(r => {
+      const status = r.roll !== null
+        ? `rolled ${r.roll} (${r.success ? 'success' : 'failure'})`
+        : r.decision ? 'decided — awaiting roll'
+        : 'pending decision';
+      lines.push(`    - ${r.username} : ${r.decision ? r.decision.optionLabel : '—'} (${status})`);
+    });
+    lines.push('');
+  }
+
+  // Environment Events
+  lines.push('ENVIRONMENT EVENTS');
+  lines.push(div);
+  const envEvents = readStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []);
+  if (envEvents.length === 0) {
+    lines.push('  (none)');
+  } else {
+    envEvents.forEach((e, i) => {
+      const when = e.at ? new Date(e.at).toLocaleTimeString() : '?';
+      lines.push(`  ${i + 1}. [${e.type}] ${e.detail || '(no detail)'} — ${when}`);
+    });
+  }
+  lines.push('');
+  lines.push(hr);
+  lines.push('End of campaign export.');
+
+  const safeName = (myRoomId || 'room').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  downloadTxtFile(`${safeName}-campaign.txt`, lines.join('\n'));
+  addMessage('Campaign snapshot exported.', 'system');
 }
 
 function exportCharacterFromRoom() {
@@ -1022,14 +1070,21 @@ function sendMessageFromInput() {
     displayError('Message cannot be empty.');
     return;
   }
+  messageInput.value = '';
+
+  // During action phase with no pending action and no active encounter:
+  // the player's first message IS their round action.
+  if (currentRoundPhase === 'action' && !myPendingRoundAction && !activeEncounterEid) {
+    submitRoundAction(text);
+    return;
+  }
 
   P2PMesh.broadcast({ t: 'room:message', text });
-  messageInput.value = '';
 }
 
-function submitRoundAction() {
+// submitRoundAction now accepts the action text directly (no separate input).
+function submitRoundAction(text) {
   if (isDM) return;
-  const text = actionInput?.value.trim() || '';
   if (!text) {
     displayError('Describe what you want to attempt this round.');
     return;
@@ -1038,48 +1093,96 @@ function submitRoundAction() {
     ? GameCatalog.getInventoryEquipBoosts(myInventory)
     : {};
   P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-action', text, statBonus });
-  // Transition UI immediately to check-phase (waiting for DM stat assignment)
-  if (diceInputPhase) diceInputPhase.classList.add('hidden');
-  if (diceCheckPhase) diceCheckPhase.classList.remove('hidden');
-  if (diceCheckInfo)  diceCheckInfo.textContent = 'Waiting for DM to assign a stat check…';
-  if (actionStatus)   actionStatus.textContent = `Action submitted: "${text}" — waiting for DM assignment.`;
-  if (actionSubmitBtn) actionSubmitBtn.disabled = true;
+  myPendingRoundAction = { text, roll: null };
+  updateRoundActionUI();
 }
- 
-// ─── DnD: Dice Roll ───────────────────────────────────────────────────────────
-function rollDice(die = 20) {
-  if (isDM) {
-    displayError('DM player-dice rolling is disabled.');
-    return;
-  }
-  if (die !== 20) {
-    displayError('Round actions use a d20 check only.');
-    return;
-  }
-  if (diceRollBtn) diceRollBtn.disabled = true;
-  if (actionStatus) actionStatus.textContent = 'Rolling…';
 
-  // Start dice face animation
-  if (diceFaceDisplay) {
-    diceFaceDisplay.classList.add('dice-face--rolling');
-    const wrapper = diceFaceDisplay.closest('.dice-face-wrapper');
+// ─── DnD: Dice Roll (in-chat roll card) ──────────────────────────────────────
+
+// Inject a roll card into the message feed after DM assigns a stat check.
+function injectRoundRollCard(pendingAction) {
+  const existing = document.getElementById('round-roll-card');
+  if (existing) existing.remove();
+
+  const msgBox = document.getElementById('message-feed');
+  if (!msgBox) return;
+
+  const { text, statLabel, statValue, threshold } = pendingAction;
+  const bonusStr = (statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue));
+
+  const card = document.createElement('div');
+  card.className = 'msg-card msg-card--roll';
+  card.id = 'round-roll-card';
+
+  const header = document.createElement('div');
+  header.className = 'roll-card-header';
+  header.textContent = '\u2694\ufe0f Your Action This Round';
+
+  const actionLine = document.createElement('div');
+  actionLine.className = 'roll-card-action';
+  actionLine.textContent = `"${text}"`;
+
+  const checkLine = document.createElement('div');
+  checkLine.className = 'roll-card-check';
+  checkLine.textContent = `Roll d20 ${bonusStr} ${statLabel} vs ${threshold}`;
+
+  const diceWrapper = document.createElement('div');
+  diceWrapper.className = 'dice-face-wrapper roll-card-dice';
+  const diceFace = document.createElement('div');
+  diceFace.className = 'dice-face';
+  diceFace.id = 'round-dice-face';
+  diceFace.textContent = '?';
+  diceWrapper.appendChild(diceFace);
+
+  const rollBtn = document.createElement('button');
+  rollBtn.className = 'dice-btn';
+  rollBtn.id = 'round-roll-btn';
+  rollBtn.textContent = 'Roll d20';
+  rollBtn.addEventListener('click', submitRoundRoll);
+
+  const resultEl = document.createElement('div');
+  resultEl.className = 'roll-card-result';
+  resultEl.id = 'round-roll-result';
+
+  card.appendChild(header);
+  card.appendChild(actionLine);
+  card.appendChild(checkLine);
+  card.appendChild(diceWrapper);
+  card.appendChild(rollBtn);
+  card.appendChild(resultEl);
+
+  msgBox.appendChild(card);
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+function submitRoundRoll() {
+  if (isDM) return;
+  const rollBtn = document.getElementById('round-roll-btn');
+  const faceEl  = document.getElementById('round-dice-face');
+
+  if (rollBtn) rollBtn.disabled = true;
+
+  if (faceEl) {
+    faceEl.classList.add('dice-face--rolling');
+    const wrapper = faceEl.closest('.dice-face-wrapper');
     if (wrapper) wrapper.classList.add('rolling');
     if (diceRollInterval) clearInterval(diceRollInterval);
     diceRollInterval = setInterval(() => {
-      diceFaceDisplay.textContent = String(Math.floor(Math.random() * 20) + 1);
+      faceEl.textContent = String(Math.floor(Math.random() * 20) + 1);
     }, 80);
   }
 
   P2PMesh.sendToPeer(dmSocketId, { t: 'round:submit-roll' });
 }
 
-// Stop dice animation and settle on a final value
+// Stop dice animation on the in-chat roll card and settle on a final value.
 function settleDiceRoll(roll) {
   if (diceRollInterval) { clearInterval(diceRollInterval); diceRollInterval = null; }
-  if (diceFaceDisplay) {
-    diceFaceDisplay.textContent = String(roll);
-    diceFaceDisplay.classList.remove('dice-face--rolling');
-    const wrapper = diceFaceDisplay.closest('.dice-face-wrapper');
+  const faceEl = document.getElementById('round-dice-face');
+  if (faceEl) {
+    faceEl.textContent = String(roll);
+    faceEl.classList.remove('dice-face--rolling');
+    const wrapper = faceEl.closest('.dice-face-wrapper');
     if (wrapper) wrapper.classList.remove('rolling');
   }
 }
@@ -1095,6 +1198,11 @@ function advanceRound() {
 // ─── DM Round Engine ──────────────────────────────────────────────────────────
 // keyed by socketId → { text, statKey, statLabel, statScore, statValue, threshold, roll, username }
 const dmRoundActions = {};
+
+// Pending encounter reports: keyed by eid → Array<report>.
+// Damage is NOT applied on receipt — it is deferred to dmAdvanceRound() so the
+// DM sees all player actions come in before results are broadcast.
+const pendingEncounterReports = {};
 
 // Keyword → stat mapping for action classification
 const ACTION_STAT_MAP = [
@@ -1222,6 +1330,29 @@ function dmAdvanceRound() {
   if (turnDisplay) turnDisplay.textContent = 'No active adventurer';
   updateRoundActionUI();
 
+  // ── Process pending encounter reports ─────────────────────────────────────
+  // Apply damage from every buffered encounter:report, broadcast HP updates,
+  // then either resolve a dead NPC or re-prompt alive players for next round.
+  let encounterResolvedThisRound = false;
+  for (const [eid, reports] of Object.entries(pendingEncounterReports)) {
+    const aggro = activeAggroNpcs[eid];
+    reports.forEach(r => {
+      if (!r.requiresRoll || !r.success) return; // no damage unless successful roll
+      if (!aggro || aggro.hp <= 0) return;
+      const dmg = Math.max(1, Math.floor(Math.random() * 6) + 1 + Math.max(0, Number(r.statValue) || 0));
+      aggro.hp = Math.max(0, aggro.hp - dmg);
+      addMessage(`\ud83d\udca5 ${r.username} hits ${aggro.name} for ${dmg} (${aggro.hp}/${aggro.maxHp} HP).`, 'system');
+      P2PMesh.broadcast({ t: 'npc:hp', eid, npcName: aggro.name, hp: aggro.hp, maxHp: aggro.maxHp, lastDamage: dmg, attackerUsername: r.username });
+    });
+    if (aggro && aggro.hp <= 0) {
+      addMessage(`\u2620\ufe0f ${aggro.name} has been defeated!`, 'system');
+      dmResolveEncounter(eid, 'death');
+      encounterResolvedThisRound = true;
+    }
+  }
+  // Clear pending reports for the next round
+  Object.keys(pendingEncounterReports).forEach(k => delete pendingEncounterReports[k]);
+
   // Aggro NPC counter-attacks: each living aggro NPC strikes a random alive
   // player at the end of every round. Damage = 1d4 + max(0, str_mod), min 1.
   Object.entries(activeAggroNpcs).forEach(([eid, npc]) => {
@@ -1249,11 +1380,11 @@ function dmAdvanceRound() {
     });
   });
 
-  // Continue the encounter cycle: if an aggro encounter is still live and the
-  // NPC is alive, reset the roster and re-prompt all alive targeted players so
-  // they can act again on the new round. The cycle ends when the NPC dies
-  // (handled in encounter:report) or when the DM force-resolves the encounter.
-  dmRepromptActiveEncounter();
+  // Re-prompt players for the next round only if the encounter is still alive
+  // (dmResolveEncounter clears activeEncounter, so check for it).
+  if (!encounterResolvedThisRound) {
+    dmRepromptActiveEncounter();
+  }
 }
 
 // Re-prompt all alive targeted players for the currently active aggro encounter
@@ -1263,6 +1394,9 @@ function dmRepromptActiveEncounter() {
   const { eid, npc, resolvedName, seed, targetSocketIds, roster } = activeEncounter;
   const aggro = activeAggroNpcs[eid];
   if (!aggro || aggro.hp <= 0) return; // only loop while a live aggro NPC exists
+
+  // Clear stale pending reports from last round before accepting new ones.
+  pendingEncounterReports[eid] = [];
 
   // Reset each roster row so a new round of decisions/rolls is required.
   roster.forEach(r => {
@@ -1508,37 +1642,29 @@ P2PMesh.on('encounter:report', ({ eid, optionId, optionLabel, requiresRoll, stat
     entry.total = total;
     entry.success = success;
     const bonus = Number(statValue) >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+    // Log action as PENDING — damage is deferred until dmAdvanceRound().
     addMessage(
-      `\ud83c\udfb2 ${username} \u2192 "${optionLabel}": d20 ${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} \u2014 ${success ? 'SUCCESS \u2713' : 'FAILURE \u2717'}`,
+      `\u23f3 ${username} \u2192 "${optionLabel}": d20 ${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} \u2014 ${success ? 'SUCCESS \u2713' : 'FAILURE \u2717'} (pending round)`,
       'system'
     );
-
-    // Aggro NPC: a successful player roll deals damage = 1d6 + max(0, statValue).
-    // When the NPC's HP hits zero, the encounter resolves as 'death' immediately.
-    const aggro = activeAggroNpcs[eid];
-    if (aggro && success) {
-      const dmg = Math.max(1, Math.floor(Math.random() * 6) + 1 + Math.max(0, Number(statValue) || 0));
-      aggro.hp = Math.max(0, aggro.hp - dmg);
-      addMessage(`\ud83d\udca5 ${username} hits ${aggro.name} for ${dmg} (${aggro.hp}/${aggro.maxHp} HP).`, 'system');
-      P2PMesh.broadcast({ t: 'npc:hp', eid, npcName: aggro.name, hp: aggro.hp, maxHp: aggro.maxHp, lastDamage: dmg, attackerUsername: username });
-      if (aggro.hp <= 0) {
-        addMessage(`\u2620\ufe0f ${aggro.name} falls to ${username}'s attack.`, 'system');
-        // Defer slightly so the npc:hp broadcast lands before the resolution card.
-        setTimeout(() => dmResolveEncounter(eid, 'death'), 100);
-      }
-    }
   } else {
-    addMessage(`\ud83d\udcdc ${username} \u2192 "${optionLabel}" (no roll required)`, 'system');
+    addMessage(`\u23f3 ${username} \u2192 "${optionLabel}" (no roll \u2014 pending round)`, 'system');
   }
 
-  const allReady = activeEncounter.roster.every(r => {
+  // Buffer the report for processing in dmAdvanceRound().
+  if (!pendingEncounterReports[eid]) pendingEncounterReports[eid] = [];
+  // Idempotent: only buffer once per player per round
+  const alreadyBuffered = pendingEncounterReports[eid].some(r => r._from === _from);
+  if (!alreadyBuffered) {
+    pendingEncounterReports[eid].push({ eid, optionId, optionLabel, requiresRoll, statLabel, statValue, threshold, roll, total, success, _from, username });
+  }
+
+  const allIn = activeEncounter.roster.every(r => {
     if (!r.decision) return false;
     return !r.check?.requiresRoll || r.roll !== null;
   });
-  if (allReady) {
-    activeEncounter.targetSocketIds.forEach(sid => {
-      P2PMesh.sendToPeer(sid, { t: 'encounter:ready', eid, npcName: activeEncounter.resolvedName });
-    });
+  if (allIn) {
+    addMessage('\u2705 All players have reported. Advance the round to apply results.', 'system');
   }
 
   dmUpdateEncounterRosterPanel(eid);
@@ -1549,7 +1675,7 @@ function dmUpdateEncounterRosterPanel(eid) {
   const el = document.getElementById('dm-encounter-roster');
   if (!el) return;
   const ready = activeEncounter.roster.every(r => r.decision && (!r.check?.requiresRoll || r.roll !== null));
-  const summary = ready ? '<div class="roster-row"><strong>✅ Encounter ready. Advance the round to resolve it.</strong></div>' : '';
+  const summary = ready ? '<div class="roster-row"><strong>\u2705 All actions in. Advance the round to apply results.</strong></div>' : '';
   el.innerHTML = summary + activeEncounter.roster.map(p => {
     let statusIcon = '⏳';
     let rollText = 'awaiting choice';
@@ -1583,6 +1709,8 @@ function dmResolveEncounter(eid, outcome) {
 
   activeEncounter = null;
   delete activeAggroNpcs[eid];
+  // Clear any buffered reports for this encounter so they don't affect future rounds.
+  delete pendingEncounterReports[eid];
 
   P2PMesh.broadcast({ t: 'encounter:resolved', eid, outcome, flavor, roster, perPlayerLoot, at });
 
@@ -1888,7 +2016,9 @@ P2PMesh.on('room:round', ({ roundNumber, turnUsername, phase }) => {
 
   if (roundChanged) {
     myPendingRoundAction = null;
-    if (actionInput) actionInput.value = '';
+    // Remove any pending round roll card from the previous round.
+    const oldCard = document.getElementById('round-roll-card');
+    if (oldCard) oldCard.remove();
   }
   updateRoundActionUI();
 });
@@ -1904,34 +2034,25 @@ P2PMesh.on('round:action:prompted', ({ from, text, statLabel, statValue, thresho
 });
 
 P2PMesh.on('round:action:assigned', ({ text, statKey, statLabel, statScore, statValue, threshold }) => {
-  myPendingRoundAction = {
-    text,
-    statKey,
-    statLabel,
-    statScore,
-    statValue,
-    threshold,
-    roll: null,
-  };
-  if (actionInput) actionInput.value = '';
+  myPendingRoundAction = { text, statKey, statLabel, statScore, statValue, threshold, roll: null };
+  injectRoundRollCard(myPendingRoundAction);
   updateRoundActionUI();
   const bonus = statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
   addMessage(`[Check Assigned] Roll d20 ${bonus} ${statLabel} vs ${threshold} for "${text}".`, 'system');
 });
 
 P2PMesh.on('round:action:roll:accepted', ({ text, statKey, statLabel, statScore, statValue, threshold, roll }) => {
-  myPendingRoundAction = {
-    text,
-    statKey,
-    statLabel,
-    statScore,
-    statValue,
-    threshold,
-    roll,
-  };
+  myPendingRoundAction = { text, statKey, statLabel, statScore, statValue, threshold, roll };
   settleDiceRoll(roll);
+  // Show result on the roll card.
+  const resultEl = document.getElementById('round-roll-result');
+  if (resultEl) {
+    const total = roll + (statValue || 0);
+    const bonus = statValue >= 0 ? `+${formatActionStatValue(statValue)}` : formatActionStatValue(statValue);
+    resultEl.textContent = `${roll} ${bonus} (${statLabel}) = ${total} vs ${threshold} — ${total >= threshold ? 'SUCCESS ✓' : 'FAILURE ✗'}`;
+  }
   updateRoundActionUI();
-  addMessage(`[Roll Locked] d20 ${roll} locked for "${text}". Resolution happens when the DM advances the round.`, 'roll');
+  addMessage(`[Roll Locked] d20 ${roll} locked for "${text}". Waiting for DM to advance the round.`, 'roll');
 });
 
 P2PMesh.on('round:action:roll-locked', ({ from, text, roll }) => {
@@ -1944,8 +2065,9 @@ P2PMesh.on('round:actions:resolved', ({ roundNumber, results }) => {
     addMessage(formatRoundResolutionMessage({ ...result, roundNumber }), result.success ? 'system' : 'error');
   });
   myPendingRoundAction = null;
-  if (diceFaceDisplay) diceFaceDisplay.textContent = '?';
-  if (diceResult) diceResult.textContent = '';
+  // Remove the roll card — results are now shown as regular messages above.
+  const card = document.getElementById('round-roll-card');
+  if (card) card.remove();
   updateRoundActionUI();
 });
 
@@ -1961,32 +2083,7 @@ P2PMesh.on('dm:whisper', ({ text }) => {
   addMessage(`🔒 [DM → you] ${escapeHtml ? escapeHtml(text) : text}`, 'narrate');
 });
 
-socket.on('room:export:campaign', ({ campaign }) => {
-  if (!campaign || typeof campaign !== 'object') {
-    displayError('Invalid campaign export payload.');
-    return;
-  }
-
-  const portableState = campaign.portableState && typeof campaign.portableState === 'object'
-    ? {
-        environment: Array.isArray(campaign.portableState.environment) ? campaign.portableState.environment : [],
-        encounters: Array.isArray(campaign.portableState.encounters) ? campaign.portableState.encounters : [],
-      }
-    : {
-        environment: readStoredJson(RUNTIME_STORAGE_KEYS.roomEnv, []),
-        encounters: readStoredJson(RUNTIME_STORAGE_KEYS.roomEncounters, []),
-      };
-
-  const snapshot = {
-    ...campaign,
-    portableState,
-    exportedAt: new Date().toISOString()
-  };
-
-  const roomCode = (campaign.roomId || myRoomId || 'room').toLowerCase();
-  downloadTxtFile(`${roomCode}-room.txt`, snapshot);
-  addMessage('Room snapshot exported.', 'system');
-});
+// room:export:campaign — removed (was a dead server round-trip; export is now fully local)
  
 // ─── DnD Game Events ──────────────────────────────────────────────────────────
  
@@ -2133,9 +2230,8 @@ function computeLocalEncounterCheck(opt) {
 P2PMesh.on('encounter:prompt', ({ eid, npcName, npcRole, npcStats, options, dmName, at }) => {
   activeEncounterEid = eid;
   encounterContext[eid] = { options: options || [], npcName, selectedOption: null, check: null };
-  // Hide the standalone round-action dice panel — encounters are resolved entirely
-  // through the in-chat encounter card to avoid duplicate/competing UIs.
-  if (dicePanelEl) dicePanelEl.classList.add('hidden');
+  // Disable the chat input while the encounter card is active — players interact via the card.
+  updateRoundActionUI();
   const roleLabel = { aggro: '⚔️ AGGRO', grey: '🌫️ GREY', utility: '🔧 UTILITY' }[npcRole] || npcRole;
   const msgBox = document.getElementById('message-feed');
   if (!msgBox) return;
@@ -2343,16 +2439,9 @@ P2PMesh.on('encounter:resolved', ({ eid, outcome, flavor, roster, perPlayerLoot,
   activeEncounterEid = null;
   delete encounterContext[eid];
 
-  // Restore the standalone round-action dice panel for non-DM players (it was
-  // hidden while the encounter prompt card was active).
-  if (!isDM && dicePanelEl) {
-    dicePanelEl.classList.remove('hidden');
-    // Reset the panel back to the input phase so the next round starts clean.
-    if (diceInputPhase) diceInputPhase.classList.remove('hidden');
-    if (diceCheckPhase) diceCheckPhase.classList.add('hidden');
-    if (actionInput) actionInput.value = '';
-    if (actionSubmitBtn) actionSubmitBtn.disabled = false;
-    if (actionStatus) actionStatus.textContent = 'Describe one action to attempt this round.';
+  // Re-enable the chat input and restore round action UI state.
+  if (!isDM) {
+    updateRoundActionUI();
   }
 
   // DM saves encounter lifecycle records in tab-scoped runtime storage.
@@ -2434,7 +2523,6 @@ socket.on('webrtc:ice-candidate', ({ fromId, candidate }) => P2PMesh.handleIceCa
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     if (document.activeElement === messageInput) sendMessageFromInput();
-    if (document.activeElement === actionInput) submitRoundAction();
     if (document.activeElement === narrateInput)  sendNarration();
   }
 });
